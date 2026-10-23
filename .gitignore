@@ -1,0 +1,32 @@
+# 컴파일 결과물
+*.class
+/com/
+out/
+bin/
+build/
+target/
+
+# 패키징 결과
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# VS Code
+.vscode/
+
+# Gradle
+.gradle/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
