@@ -31,4 +31,6 @@ tasks.withType(JavaCompile).configureEach {
 
 test {
     useJUnitPlatform()
+    // 모델 테스트는 화면 없이 돌아야 함 (CI 서버 대비)
+    systemProperty 'java.awt.headless', 'true'
 }
