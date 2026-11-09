@@ -1,0 +1,129 @@
+@startuml
+title Life Game — 변경 전 (원본 Holub 코드, 태그 v0-original)
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Swing UI" {
+  class Life {
+    {static} +main(arguments : String[])
+  }
+  class Universe <<Singleton>> {
+    -outermostCell : Cell
+    {static} -theInstance : Universe
+    {static} -DEFAULT_GRID_SIZE : int = 8
+    {static} -DEFAULT_CELL_SIZE : int = 8
+    {static} +instance() : Universe
+    -doLoad()
+    -doStore()
+    +paint(g : Graphics)
+    -refreshNow()
+  }
+  class Clock <<Singleton>> {
+    -clock : java.util.Timer
+    -tick : TimerTask
+    -publisher : Publisher
+    {static} +instance() : Clock
+    +startTicking(millisecondsBetweenTicks : int)
+    +stop()
+    +addClockListener(observer : Listener)
+    +tick()
+    -createMenus()
+  }
+  interface "Clock.Listener" as ClockListener {
+    +tick()
+  }
+}
+
+package "도구" {
+  class MenuSite
+  class Files
+  class Publisher
+  class ConditionVariable
+}
+
+package "보드 모델" {
+  interface Cell {
+    +figureNextState(north : Cell, south : Cell, east : Cell, west : Cell, northeast : Cell, northwest : Cell, southeast : Cell, southwest : Cell) : boolean
+    +edge(row : int, column : int) : Cell
+    +transition() : boolean
+    +redraw(g : Graphics, here : Rectangle, drawAll : boolean)
+    +userClicked(here : Point, surface : Rectangle)
+    +isAlive() : boolean
+    +widthInCells() : int
+    +create() : Cell
+    +isDisruptiveTo() : Direction
+    +clear()
+    +transfer(memento : Storable, upperLeftCorner : Point, doLoad : boolean) : boolean
+    +createMemento() : Storable
+  }
+  interface "Cell.Memento" as Memento {
+    +markAsAlive(location : Point)
+    +isAlive(location : Point) : boolean
+  }
+  interface Storable {
+    +load(in : InputStream)
+    +flush(out : OutputStream)
+  }
+  class Neighborhood <<Composite>> {
+    -grid : Cell[][]
+    -gridSize : int
+    -amActive : boolean
+    -activeEdges : Direction
+    {static} -readingPermitted : ConditionVariable
+    {static} -nestingLevel : int
+  }
+  class "Neighborhood.NeighborhoodState" as NeighborhoodState
+  class Resident {
+    {static} -BORDER_COLOR : Color
+    {static} -LIVE_COLOR : Color
+    {static} -DEAD_COLOR : Color
+    -amAlive : boolean
+    -willBeAlive : boolean
+  }
+  class Direction
+}
+
+Life ..> Universe : instance()로 화면에 추가
+Universe --> Cell : outermostCell
+Universe ..> Neighborhood : 생성 (8x8 안에 8x8 고정)
+Universe ..> Resident : 생성
+Universe ..> Clock : 구독 / stop()
+Universe ..> MenuSite : Grid 메뉴 등록
+Universe ..> Files : 파일 선택
+Universe ..> ClockListener : 익명 클래스로 구현
+Clock --> Publisher : 리스너 관리
+Clock ..> ClockListener : tick() 알림
+Clock ..> MenuSite : Go 메뉴 등록
+
+Neighborhood ..|> Cell
+Resident ..|> Cell
+Neighborhood *-- "1..*" Cell : grid
+Neighborhood ..> ConditionVariable : 그리기·계산 동시 접근 제어
+Neighborhood +-- NeighborhoodState
+NeighborhoodState ..|> Memento
+Memento --|> Storable
+Cell ..> Direction : isDisruptiveTo()
+
+note right of Universe
+  한 클래스가 화면(JPanel), 마우스 입력,
+  Grid 메뉴, 파일 Load/Store, Clock 구독,
+  보드 생성, Singleton을 모두 맡음
+end note
+
+note bottom of Cell
+  redraw(Graphics)·userClicked(Rectangle)로
+  모델 인터페이스가 Swing 그리기·픽셀 좌표에 의존
+end note
+
+note bottom of Resident
+  Conway 규칙(B3/S23)과
+  셀 색상이 코드에 고정
+end note
+
+note right of Clock
+  java.util.Timer 별도 스레드에서 tick() →
+  Swing 화면 스레드와 동시에 보드 접근
+  (Neighborhood의 ConditionVariable로 제어)
+end note
+
+@enduml
