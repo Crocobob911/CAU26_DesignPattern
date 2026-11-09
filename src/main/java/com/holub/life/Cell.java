@@ -1,7 +1,6 @@
 package com.holub.life;
-import java.awt.*;
-
-import com.holub.life.Storable;
+import java.awt.Point;
+import java.awt.Rectangle;
 
 /***
  * This interface is the basic unit that comprises a life board.
@@ -39,26 +38,21 @@ public interface Cell
 	 */
 	boolean transition();
 
-	/** Redraw yourself in the indicated
-	 *  rectangle on the indicated Graphics object if ncessary. This
-	 *  method is meant for a conditional redraw, where some of the
-	 *  cells might not be refreshed (if they haven't changed state,
-	 *  for example).
-	 *  @param g redraw using this graphics,
-	 *  @param here a rectangle that describes the bounds of the
-	 *  current cell.
-	 *  @param drawAll if true, draw an entire compound cell;
-	 *  otherwise, draw only the subcells that need to be redrawn.
-	 */
+	/** Visit the cells and blocks using board coordinates. */
+	void accept(CellVisitor visitor, int x, int y);
 
-	void redraw(Graphics g, Rectangle here, boolean drawAll);
+	boolean isAliveAt(int x, int y);
 
-	/** A user has clicked somewhere within you.
-	 *  @param here The position of the click relative to the bounding
-	 *  			rectangle of the current Cell.
-	 */
+	/** Return true when the edit changes the cell. */
+	boolean setAliveAt(int x, int y, boolean alive);
 
-	void userClicked(Point here, Rectangle surface);
+	/** Compatibility entry point for callers using relative pixel coordinates. */
+	default void userClicked(Point here, Rectangle surface)
+	{
+		LegacyCellInput.toggle(this, here, surface);
+	}
+
+	void setRule(LifeRule rule);
 
 	/** Return true if this cell or any subcells are alive.
 	 */
@@ -148,9 +142,10 @@ public interface Cell
 		public int 		 widthInCells()  	{return 0;				  }
 		public boolean	 transition()		{return false;			  }
 
-		public void	userClicked(Point h, Rectangle s				){}
-		public void redraw 		(Graphics g, Rectangle here,
-												 boolean drawAll	){}
+		public void accept(CellVisitor visitor, int x, int y) {}
+		public boolean isAliveAt(int x, int y) { return false; }
+		public boolean setAliveAt(int x, int y, boolean alive) { return false; }
+		public void setRule(LifeRule rule) {}
 
 		public boolean transfer( Storable m, Point ul, boolean load )
 		{	return false;
