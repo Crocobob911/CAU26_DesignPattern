@@ -102,7 +102,7 @@ Life ..> UniverseBuilder : 기본 보드 구성
 Life ..> Clock : 틱 콜백 연결
 UniversePanel --> LifeMediator : 입력 전달
 UniversePanel --> LifeFacade : 보드 조회 및 이벤트 구독
-UniversePanel ..> CellRenderer : 생성
+UniversePanel ..> CellVisitor : 테마로 렌더러 조립\n(E8, e8-theme-renderer.puml 참고)
 CellRenderer ..|> CellVisitor
 
 LifeMediator --> LifeFacade : 모델 작업 요청

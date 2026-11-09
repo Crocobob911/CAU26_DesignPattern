@@ -2,7 +2,6 @@ package com.holub.life;
 
 import com.holub.io.Files;
 import com.holub.ui.MenuSite;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.GridLayout;
@@ -13,7 +12,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.List;
+import java.util.Objects;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
@@ -22,13 +24,24 @@ import javax.swing.SpinnerNumberModel;
 
 /** Swing input, menus and rendering for the board. */
 final class UniversePanel extends JPanel {
+    /** Themes offered in the View > Theme menu. The first one is the default. */
+    static final List<BoardTheme> THEMES = List.of(new ClassicTheme(), new DarkTheme(), new HighContrastTheme());
+
+    private static final String GRID_LINES = "Grid Lines";
+    private static final String CELL_AGE = "Cell Age Colors";
+
     private final LifeMediator mediator;
     private final LifeFacade facade;
+    private BoardTheme theme = THEMES.get(0);
+    private boolean showGridLines = true;
+    private boolean showCellAge = false;
+    private final CellAgeTracker cellAges;
 
     UniversePanel(LifeMediator mediator) {
         this.mediator = mediator;
         this.facade = mediator.facade();
-        setBackground(Color.WHITE);
+        this.cellAges = new CellAgeTracker(facade);
+        setBackground(theme.background());
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -57,6 +70,51 @@ final class UniversePanel extends JPanel {
         MenuSite.addLine(this, "Grid", "Store", event -> store());
         MenuSite.addLine(this, "Grid", "Size...", event -> chooseSize());
         MenuSite.addLine(this, "Grid", "Exit", event -> System.exit(0));
+        installViewMenus();
+    }
+
+    /**
+     * View menu for E8. These only change how this panel draws, so they call the panel directly.
+     * Nothing else (clock, model, other panels) has to react, so they do not go through the Mediator.
+     */
+    private void installViewMenus() {
+        for (BoardTheme each : THEMES)
+            MenuSite.addLine(this, "View:Theme", each.name(), event -> {
+                setTheme(each);
+                refreshViewMenuLabels();
+            });
+        MenuSite.addLine(this, "View", "-", null);
+        MenuSite.addLine(this, "View", GRID_LINES, event -> {
+            setShowGridLines(!showGridLines);
+            refreshViewMenuLabels();
+        });
+        MenuSite.addLine(this, "View", CELL_AGE, event -> {
+            setShowCellAge(!showCellAge);
+            refreshViewMenuLabels();
+        });
+        refreshViewMenuLabels();
+    }
+
+    /** Shows the current choice in the menu text, e.g. "• Dark" and "Grid Lines: On". */
+    private void refreshViewMenuLabels() {
+        for (BoardTheme each : THEMES)
+            setMenuText("View:Theme", each.name(), choiceLabel(each.name(), each == theme));
+        setMenuText("View", GRID_LINES, toggleLabel(GRID_LINES, showGridLines));
+        setMenuText("View", CELL_AGE, toggleLabel(CELL_AGE, showCellAge));
+    }
+
+    private void setMenuText(String menu, String name, String text) {
+        JMenuItem item = MenuSite.getMyMenuItem(this, menu, name);
+        if (item != null)
+            item.setText(text);
+    }
+
+    static String choiceLabel(String name, boolean selected) {
+        return selected ? "\u2022 " + name : name;
+    }
+
+    static String toggleLabel(String name, boolean on) {
+        return name + (on ? ": On" : ": Off");
     }
 
     @Override
@@ -68,7 +126,45 @@ final class UniversePanel extends JPanel {
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
-        facade.visitCells(new CellRenderer(graphics, cellSize()));
+        facade.visitCells(createRenderer(graphics, cellSize()));
+    }
+
+    /** Builds the decorator chain from the current theme and display options. */
+    CellVisitor createRenderer(Graphics graphics, int cellSize) {
+        CellVisitor renderer = theme.createCellPainter(graphics, cellSize);
+        if (showCellAge)
+            renderer = theme.createAgeColors(renderer, graphics, cellSize, cellAges);
+        if (showGridLines)
+            renderer = theme.createGridLines(renderer, graphics, cellSize);
+        return theme.createBlockBorders(renderer, graphics, cellSize);
+    }
+
+    BoardTheme theme() {
+        return theme;
+    }
+
+    boolean showsGridLines() {
+        return showGridLines;
+    }
+
+    boolean showsCellAge() {
+        return showCellAge;
+    }
+
+    void setTheme(BoardTheme theme) {
+        this.theme = Objects.requireNonNull(theme);
+        setBackground(theme.background());
+        repaint();
+    }
+
+    void setShowCellAge(boolean show) {
+        showCellAge = show;
+        repaint();
+    }
+
+    void setShowGridLines(boolean show) {
+        showGridLines = show;
+        repaint();
     }
 
     private int cellSize() {

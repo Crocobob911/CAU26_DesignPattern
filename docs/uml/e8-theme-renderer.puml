@@ -1,0 +1,129 @@
+@startuml
+title E8 테마·셀 나이 색상 — Abstract Factory + Decorator + Observer
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Swing UI" {
+  class UniversePanel {
+    {static} ~THEMES : List<BoardTheme>
+    -theme : BoardTheme
+    -showGridLines : boolean
+    -showCellAge : boolean
+    -cellAges : CellAgeTracker
+    ~createRenderer(graphics : Graphics, cellSize : int) : CellVisitor
+    ~setTheme(theme : BoardTheme)
+    ~setShowGridLines(show : boolean)
+    ~setShowCellAge(show : boolean)
+    -installViewMenus()
+    -refreshViewMenuLabels()
+  }
+}
+
+package "테마 (Abstract Factory)" {
+  interface BoardTheme <<AbstractFactory>> {
+    +name() : String
+    +background() : Color
+    +createCellPainter(graphics : Graphics, cellSize : int) : CellVisitor
+    +createAgeColors(inner : CellVisitor, graphics : Graphics, cellSize : int, ages : CellAges) : CellVisitor
+    +createGridLines(inner : CellVisitor, graphics : Graphics, cellSize : int) : CellVisitor
+    +createBlockBorders(inner : CellVisitor, graphics : Graphics, cellSize : int) : CellVisitor
+  }
+  abstract class PaletteTheme {
+    -live : Color
+    -dead : Color
+    -gridLine : Color
+    -blockBorder : Color
+    -activeBlock : Color
+    -youngCell : Color
+    -oldCell : Color
+  }
+  class ClassicTheme <<ConcreteFactory>>
+  class DarkTheme <<ConcreteFactory>>
+  class HighContrastTheme <<ConcreteFactory>>
+}
+
+package "렌더러 (Decorator)" {
+  interface CellVisitor <<Visitor>> {
+    +enterNeighborhood(x : int, y : int, width : int) : boolean
+    +visitResident(x : int, y : int, alive : boolean)
+    +leaveNeighborhood(x : int, y : int, width : int, active : boolean)
+  }
+  class CellRenderer <<ConcreteComponent>> {
+    -live : Color
+    -dead : Color
+  }
+  abstract class RendererDecorator <<Decorator>> {
+    -inner : CellVisitor
+  }
+  class AgeColorDecorator {
+    {static} ~FULL_AGE : int = 10
+    -ages : CellAges
+    {static} ~colorFor(age : int, young : Color, old : Color) : Color
+  }
+  class GridLineDecorator
+  class BlockBorderDecorator
+}
+
+package "셀 나이 (Observer)" {
+  interface CellAges {
+    +ageAt(x : int, y : int) : int
+  }
+  class CellAgeTracker <<Observer>> {
+    -width : int
+    -ages : int[]
+    +ageAt(x : int, y : int) : int
+    +detach()
+    -onChange(event : Event)
+    -restart()
+  }
+}
+
+package "모델 (기존, 수정 없음)" {
+  class LifeFacade <<Facade>> {
+    +addListener(listener : Consumer<Event>)
+    +removeListener(listener : Consumer<Event>)
+    +visitCells(visitor : CellVisitor)
+  }
+}
+
+UniversePanel --> BoardTheme : 현재 테마
+UniversePanel *-- CellAgeTracker : 생성
+UniversePanel ..> LifeFacade : visitCells(렌더러)
+
+PaletteTheme ..|> BoardTheme
+ClassicTheme --|> PaletteTheme
+DarkTheme --|> PaletteTheme
+HighContrastTheme --|> PaletteTheme
+PaletteTheme ..> CellRenderer : 생성
+PaletteTheme ..> AgeColorDecorator : 생성
+PaletteTheme ..> GridLineDecorator : 생성
+PaletteTheme ..> BlockBorderDecorator : 생성
+
+CellRenderer ..|> CellVisitor
+RendererDecorator ..|> CellVisitor
+RendererDecorator o--> "1" CellVisitor : inner
+AgeColorDecorator --|> RendererDecorator
+GridLineDecorator --|> RendererDecorator
+BlockBorderDecorator --|> RendererDecorator
+AgeColorDecorator --> CellAges
+
+CellAgeTracker ..|> CellAges
+CellAgeTracker --> LifeFacade : 변경 알림 구독
+
+note bottom of RendererDecorator
+  조립 순서 (UniversePanel.createRenderer):
+  CellRenderer
+   → AgeColorDecorator (나이 색 On일 때)
+   → GridLineDecorator (격자선 On일 때)
+   → BlockBorderDecorator
+  안쪽부터 그리고 바깥이 덧그림
+end note
+
+note right of CellAgeTracker
+  TICK: 생존 +1, 탄생 1, 죽음 0
+  EDIT: 켠 칸 1, 끈 칸 0
+  CLEAR·LOAD·RESTORE·RESIZE: 다시 1부터
+  RULE: 유지
+end note
+
+@enduml
