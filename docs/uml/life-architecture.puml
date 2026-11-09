@@ -29,11 +29,15 @@ package "게임 제어와 보드 구성" {
     +isAlive(x : int, y : int) : boolean
     +clear()
     +width() : int
+    +generation() : long
     +createSnapshot() : Snapshot
     +restore(snapshot : Snapshot)
     +setRule(rule : LifeRule)
     +addListener(listener : Consumer<Event>)
+    +removeListener(listener : Consumer<Event>)
     +visitCells(visitor : CellVisitor)
+    +load(input : InputStream)
+    +store(output : OutputStream)
   }
   class "LifeFacade.Snapshot" as Snapshot {
     -width : int
