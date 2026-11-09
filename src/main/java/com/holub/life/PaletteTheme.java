@@ -13,9 +13,11 @@ abstract class PaletteTheme implements BoardTheme {
     private final Color gridLine;
     private final Color blockBorder;
     private final Color activeBlock;
+    private final Color youngCell;
+    private final Color oldCell;
 
     PaletteTheme(String name, Color background, Color live, Color dead,
-            Color gridLine, Color blockBorder, Color activeBlock) {
+            Color gridLine, Color blockBorder, Color activeBlock, Color youngCell, Color oldCell) {
         this.name = Objects.requireNonNull(name);
         this.background = Objects.requireNonNull(background);
         this.live = Objects.requireNonNull(live);
@@ -23,6 +25,8 @@ abstract class PaletteTheme implements BoardTheme {
         this.gridLine = Objects.requireNonNull(gridLine);
         this.blockBorder = Objects.requireNonNull(blockBorder);
         this.activeBlock = Objects.requireNonNull(activeBlock);
+        this.youngCell = Objects.requireNonNull(youngCell);
+        this.oldCell = Objects.requireNonNull(oldCell);
     }
 
     @Override
@@ -38,6 +42,11 @@ abstract class PaletteTheme implements BoardTheme {
     @Override
     public CellVisitor createCellPainter(Graphics graphics, int cellSize) {
         return new CellRenderer(graphics, cellSize, live, dead);
+    }
+
+    @Override
+    public CellVisitor createAgeColors(CellVisitor inner, Graphics graphics, int cellSize, CellAges ages) {
+        return new AgeColorDecorator(inner, graphics, cellSize, ages, youngCell, oldCell);
     }
 
     @Override

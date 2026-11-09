@@ -7,6 +7,7 @@ import java.awt.Color;
 final class ClassicTheme extends PaletteTheme {
     ClassicTheme() {
         super("Classic", Color.WHITE, Color.RED, Colors.LIGHT_YELLOW,
-                Colors.DARK_YELLOW, Colors.LIGHT_ORANGE, Color.BLUE);
+                Colors.DARK_YELLOW, Colors.LIGHT_ORANGE, Color.BLUE,
+                Colors.DARK_ORANGE, Colors.DARK_RED);   // cell age: young -> old
     }
 }

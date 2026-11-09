@@ -26,10 +26,13 @@ final class UniversePanel extends JPanel {
     private final LifeFacade facade;
     private BoardTheme theme = new ClassicTheme();
     private boolean showGridLines = true;
+    private boolean showCellAge = false;
+    private final CellAgeTracker cellAges;
 
     UniversePanel(LifeMediator mediator) {
         this.mediator = mediator;
         this.facade = mediator.facade();
+        this.cellAges = new CellAgeTracker(facade);
         setBackground(theme.background());
 
         addMouseListener(new MouseAdapter() {
@@ -76,6 +79,8 @@ final class UniversePanel extends JPanel {
     /** Builds the decorator chain from the current theme and display options. */
     CellVisitor createRenderer(Graphics graphics, int cellSize) {
         CellVisitor renderer = theme.createCellPainter(graphics, cellSize);
+        if (showCellAge)
+            renderer = theme.createAgeColors(renderer, graphics, cellSize, cellAges);
         if (showGridLines)
             renderer = theme.createGridLines(renderer, graphics, cellSize);
         return theme.createBlockBorders(renderer, graphics, cellSize);
@@ -84,6 +89,11 @@ final class UniversePanel extends JPanel {
     void setTheme(BoardTheme theme) {
         this.theme = Objects.requireNonNull(theme);
         setBackground(theme.background());
+        repaint();
+    }
+
+    void setShowCellAge(boolean show) {
+        showCellAge = show;
         repaint();
     }
 
