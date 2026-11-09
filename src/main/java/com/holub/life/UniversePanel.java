@@ -2,7 +2,6 @@ package com.holub.life;
 
 import com.holub.io.Files;
 import com.holub.ui.MenuSite;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.GridLayout;
@@ -13,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Objects;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -24,11 +24,13 @@ import javax.swing.SpinnerNumberModel;
 final class UniversePanel extends JPanel {
     private final LifeMediator mediator;
     private final LifeFacade facade;
+    private BoardTheme theme = new ClassicTheme();
+    private boolean showGridLines = true;
 
     UniversePanel(LifeMediator mediator) {
         this.mediator = mediator;
         this.facade = mediator.facade();
-        setBackground(Color.WHITE);
+        setBackground(theme.background());
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -68,7 +70,26 @@ final class UniversePanel extends JPanel {
     @Override
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
-        facade.visitCells(new CellRenderer(graphics, cellSize()));
+        facade.visitCells(createRenderer(graphics, cellSize()));
+    }
+
+    /** Builds the decorator chain from the current theme and display options. */
+    CellVisitor createRenderer(Graphics graphics, int cellSize) {
+        CellVisitor renderer = theme.createCellPainter(graphics, cellSize);
+        if (showGridLines)
+            renderer = theme.createGridLines(renderer, graphics, cellSize);
+        return theme.createBlockBorders(renderer, graphics, cellSize);
+    }
+
+    void setTheme(BoardTheme theme) {
+        this.theme = Objects.requireNonNull(theme);
+        setBackground(theme.background());
+        repaint();
+    }
+
+    void setShowGridLines(boolean show) {
+        showGridLines = show;
+        repaint();
     }
 
     private int cellSize() {

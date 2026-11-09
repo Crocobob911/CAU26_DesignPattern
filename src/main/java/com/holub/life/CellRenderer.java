@@ -1,20 +1,26 @@
 package com.holub.life;
 
-import com.holub.ui.Colors;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Rectangle;
 
-/** Draws a Composite board without exposing graphics to the model. */
+/**
+ * The innermost board renderer: fills each cell with the live or dead color.
+ * Lines and borders are added by decorators; colors come from a {@link BoardTheme}.
+ */
 final class CellRenderer implements CellVisitor {
     private final Graphics graphics;
     private final int cellSize;
     private final Rectangle clip;
+    private final Color live;
+    private final Color dead;
 
-    CellRenderer(Graphics graphics, int cellSize) {
+    CellRenderer(Graphics graphics, int cellSize, Color live, Color dead) {
         this.graphics = graphics;
         this.cellSize = cellSize;
         this.clip = graphics.getClipBounds();
+        this.live = live;
+        this.dead = dead;
     }
 
     @Override
@@ -25,25 +31,7 @@ final class CellRenderer implements CellVisitor {
 
     @Override
     public void visitResident(int x, int y, boolean alive) {
-        int left = x * cellSize;
-        int top = y * cellSize;
-        graphics.setColor(alive ? Color.RED : Colors.LIGHT_YELLOW);
-        graphics.fillRect(left + 1, top + 1, cellSize - 1, cellSize - 1);
-        graphics.setColor(Colors.DARK_YELLOW);
-        graphics.drawLine(left, top, left, top + cellSize);
-        graphics.drawLine(left, top, left + cellSize, top);
-    }
-
-    @Override
-    public void leaveNeighborhood(int x, int y, int width, boolean active) {
-        int left = x * cellSize;
-        int top = y * cellSize;
-        int pixels = width * cellSize;
-        graphics.setColor(Colors.LIGHT_ORANGE);
-        graphics.drawRect(left, top, pixels, pixels);
-        if (active && pixels > 2) {
-            graphics.setColor(Color.BLUE);
-            graphics.drawRect(left + 1, top + 1, pixels - 2, pixels - 2);
-        }
+        graphics.setColor(alive ? live : dead);
+        graphics.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
     }
 }
