@@ -1,21 +1,8 @@
 package com.holub.life;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Point;
 import java.util.*;
 import java.io.*;
-import javax.swing.*;
-
-import com.holub.io.Files;
-import com.holub.life.Cell;
-import com.holub.ui.MenuSite;
-import com.holub.ui.Colors;
-import com.holub.asynch.ConditionVariable;
-
-import com.holub.life.Cell;
-import com.holub.life.Clock;
-import com.holub.life.Direction;
-import com.holub.life.Storable;
 
 /***
  * A group of {@link Cell} objects. Cells are grouped into neighborhoods
@@ -35,14 +22,6 @@ import com.holub.life.Storable;
 
 public final class Neighborhood implements Cell
 {
-	/** Block if reading is not permitted because the grid is
-	 *  transitioning to the next state. Only one lock is
-	 *  used (for the outermost neighborhood) since all updates
-	 *  must be requested through the outermost neighborhood.
-	 */
-	private static final ConditionVariable readingPermitted =
-											new ConditionVariable(true);
-
 	/** Returns true only if none of the cells in the Neighborhood
 	 *  changed state during the last transition.
 	 */
@@ -82,12 +61,6 @@ public final class Neighborhood implements Cell
 	public Cell create()
 	{	return new Neighborhood(gridSize, grid[0][0]);
 	}
-
-	/** Became stable on the last clock tick. One more refresh is
-	 *  required.
-	 */
-
-	private boolean oneLastRefreshRequired = false;
 
 	/** Shows the direction of the cells along the edge of the block 
 	 *  that will change  state in the next transition. For example,
@@ -237,9 +210,6 @@ public final class Neighborhood implements Cell
 			}
 		}
 
-		if( amActive && nothingHappened )
-			oneLastRefreshRequired = true;
-
 		amActive = !nothingHappened;
 		return amActive;
 	}
@@ -252,20 +222,7 @@ public final class Neighborhood implements Cell
 	 */
 	public boolean transition()
 	{	
-		// The condition variable is set and reset only by the
-		// outermost neighborhood. It's actually incorrect
-		// for an inner block to touch it because the whole
-		// board has to be locked for edge cells in a subblock
-		// to compute their next state correctly. There's no
-		// race condition since the only place that transition()
-		// is called is from the clock tick, and recursively
-		// from here. As long as the recompute time is less
-		// than the tick interval, everything's copacetic.
-
 		boolean someSubcellChangedState = false;
-
-		if( ++nestingLevel == 0 )
-			readingPermitted.set(false);
 
 		activeEdges.clear();							/*(1)*/
 
@@ -277,21 +234,8 @@ public final class Neighborhood implements Cell
 				}								 //{=transition.end}
 			}
 		
-		if( nestingLevel-- == 0 )
-			readingPermitted.set(true);
-
 		return someSubcellChangedState;
 	}
-	// The following variable is used only by the transition()
-	// method. Since Java doesn't support static local variables,
-	// I am forced to declare it in class scope, but I deliberately
-	// don't put it up at the top of the class defintion because
-	// it's not really an attribute of the class---it's just
-	// an implemenation detail of the immediately preceding
-	// method.
-	//
-	private static int nestingLevel = -1;
-
 
 	/** Modifies activeEdges to indicate whether the addition
 	 *  of the cell at (row,column) makes an edge active.
@@ -324,69 +268,18 @@ public final class Neighborhood implements Cell
 		// else it's an internal cell. Do nothing.
 	}
 
-	/** Redraw the current neighborhood only if necessary (something
-	 *  changed in the last transition).
-	 *
-	 *  @param g Draw onto this graphics.
-	 *  @param here Bounding rectangle for current Neighborhood.
-	 *  @param drawAll force a redraw, even if nothing has changed.
-	 *  @see #transition
-	 */
-
-	public void redraw(Graphics g, Rectangle here, boolean drawAll)
-	{	
-		// If the current neighborhood is stable (nothing changed
-		// in the last transition stage), then there's nothing
-		// to do. Just return. Otherwise, update the current block
-		// and all sub-blocks. Since this algorithm is applied
-		// recursively to sublocks, only those blocks that actually
-		// need to update will actually do so.
-
-			
-		if( !amActive && !oneLastRefreshRequired && !drawAll )
+	public void accept(CellVisitor visitor, int x, int y)
+	{
+		int size = widthInCells();
+		if (!visitor.enterNeighborhood(x, y, size))
 			return;
-		try
-		{
-			oneLastRefreshRequired = false;
-			int compoundWidth = here.width;
-			Rectangle subcell = new Rectangle(	here.x, here.y,
-											here.width  / gridSize,
-											here.height / gridSize );
 
-			// Check to see if we can paint. If not, just return. If
-			// so, actually wait for permission (in case there's
-			// a race condition, then paint.
+		int stride = size / gridSize;
+		for (int row = 0; row < gridSize; row++)
+			for (int column = 0; column < gridSize; column++)
+				grid[row][column].accept(visitor, x + column * stride, y + row * stride);
 
-			if( !readingPermitted.isTrue() )	//{=Neighborhood.reading.not.permitted}
-				return;
-
-			readingPermitted.waitForTrue();
-
-			for( int row = 0; row < gridSize; ++row )
-			{   for( int column = 0; column < gridSize; ++column )
-				{   grid[row][column].redraw( g, subcell, drawAll );	// {=Neighborhood.redraw3}
-				    subcell.translate( subcell.width, 0);
-				}
-				subcell.translate(-compoundWidth, subcell.height);
-			}
-
-			g = g.create();
-			g.setColor( Colors.LIGHT_ORANGE );
-			g.drawRect( here.x, here.y, here.width, here.height );
-
-			if( amActive )
-			{	g.setColor( Color.BLUE );
-				g.drawRect(	here.x+1,	  here.y+1,
-							here.width-2, here.height-2 );
-			}
-
-			g.dispose();
-		}
-		catch( InterruptedException e ) 
-		{	// thrown from waitForTrue. Just
-			// ignore it, since not printing is a
-			// reasonable reaction to an interrupt.
-		}
+		visitor.leaveNeighborhood(x, y, size, amActive);
 	}
 
 	/** Return the edge cell in the indicated row and column.
@@ -399,24 +292,39 @@ public final class Neighborhood implements Cell
 		return grid[row][column];
 	}
 
-	/** Notification of a mouse click. The point is relative to the
-	 *  upper-left corner of the surface.
-	 */
-	public void userClicked(Point here, Rectangle surface)
+	public boolean isAliveAt(int x, int y)
 	{
-		int pixelsPerCell = surface.width / gridSize ;
-		int row				= here.y     	/ pixelsPerCell ;
-		int column			= here.x     	/ pixelsPerCell ;
-		int rowOffset		= here.y     	% pixelsPerCell ;
-		int columnOffset	= here.x     	% pixelsPerCell ;
+		int stride = grid[0][0].widthInCells();
+		return grid[y / stride][x / stride].isAliveAt(x % stride, y % stride);
+	}
 
-		Point position = new Point( columnOffset, rowOffset );
-		Rectangle subcell = new Rectangle(	0, 0, pixelsPerCell,
-												  pixelsPerCell );
+	public boolean setAliveAt(int x, int y, boolean alive)
+	{
+		int stride = grid[0][0].widthInCells();
+		int row = y / stride;
+		int column = x / stride;
+		if (!grid[row][column].setAliveAt(x % stride, y % stride, alive))
+			return false;
 
-		grid[row][column].userClicked(position, subcell); //{=Neighborhood.userClicked.call}
 		amActive = true;
 		rememberThatCellAtEdgeChangedState(row, column);
+		return true;
+	}
+
+	public void setRule(LifeRule rule)
+	{
+		for (Cell[] row : grid)
+			for (Cell cell : row)
+				cell.setRule(rule);
+	}
+
+	void activateAll()
+	{
+		amActive = true;
+		for (Cell[] row : grid)
+			for (Cell cell : row)
+				if (cell instanceof Neighborhood neighborhood)
+					neighborhood.activateAll();
 	}
 
 	public boolean isAlive()
@@ -466,7 +374,7 @@ public final class Neighborhood implements Cell
 	}
 
 	public Storable createMemento()
-	{	Memento m = new NeighborhoodState();
+	{	Memento m = emptyMemento();
 		transfer(m, new Point(0,0), Cell.STORE);
 		return m;
 	}
@@ -478,50 +386,59 @@ public final class Neighborhood implements Cell
 	 * rewrite load() and flush() to use XML.
 	 */
 
+	static Memento emptyMemento()
+	{	return new NeighborhoodState();
+	}
+
 	private static class NeighborhoodState implements Cell.Memento
-	{	Collection liveCells = new LinkedList();
+	{
+		private Set<Point> liveCells = new LinkedHashSet<>();
 
-		public NeighborhoodState( InputStream in ) throws IOException
-												{ load(in); }
-		public NeighborhoodState( 			   ){			}
-
-		public void load( InputStream in ) throws IOException
-		{	try
-			{	ObjectInputStream source = new ObjectInputStream( in );
-				liveCells = (Collection)( source.readObject() );
+		public void load(InputStream in) throws IOException
+		{
+			ObjectInputStream source = new ObjectInputStream(in);
+			source.setObjectInputFilter(info -> {
+				if (info.depth() > 3 || info.references() > 1_000_000)
+					return ObjectInputFilter.Status.REJECTED;
+				Class<?> type = info.serialClass();
+				if (type == null)
+					return ObjectInputFilter.Status.UNDECIDED;
+				return type == LinkedList.class || type == Point.class
+						? ObjectInputFilter.Status.ALLOWED
+						: ObjectInputFilter.Status.REJECTED;
+			});
+			try
+			{
+				if (!(source.readObject() instanceof LinkedList<?> points))
+					throw new IOException("Expected a list of live cells");
+				Set<Point> loaded = new LinkedHashSet<>();
+				for (Object entry : points)
+				{
+					if (!(entry instanceof Point point))
+						throw new IOException("Invalid live cell");
+					loaded.add(point);
+				}
+				liveCells = loaded;
 			}
-			catch(ClassNotFoundException e)
-			{	// This exception shouldn't be rethrown as
-				// a ClassNotFoundException because the
-				// outside world shouldn't know (or care) that we're
-				// using serialization to load the object. Nothring
-				// wrong with treating it as an I/O error, however.
-
-				throw new IOException(
-							"Internal Error: Class not found on load");
+			catch (ClassNotFoundException e)
+			{
+				throw new IOException("Unable to read life file", e);
 			}
 		}
 
-		public void flush( OutputStream out ) throws IOException
-		{	ObjectOutputStream sink = new ObjectOutputStream(out);
-			sink.writeObject( liveCells );
+		public void flush(OutputStream out) throws IOException
+		{
+			ObjectOutputStream sink = new ObjectOutputStream(out);
+			sink.writeObject(new LinkedList<>(liveCells));
+			sink.flush();
 		}
-	
+
 		public void markAsAlive(Point location)
-		{	liveCells.add( new Point( location ) );
+		{	liveCells.add(new Point(location));
 		}
 
 		public boolean isAlive(Point location)
 		{	return liveCells.contains(location);
-		}
-
-		public String toString()
-		{	StringBuffer b = new StringBuffer();
-
-			b.append("NeighborhoodState:\n");
-			for( Iterator i = liveCells.iterator(); i.hasNext() ;)
-				b.append( ((Point) i.next()).toString() + "\n" );
-			return b.toString();
 		}
 	}
 }

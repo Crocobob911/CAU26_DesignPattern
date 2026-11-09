@@ -1,14 +1,6 @@
 package com.holub.life;
 
-import java.awt.*;
-import javax.swing.*;
-import com.holub.ui.Colors;	// Contains constants specifying various
-							// colors not defined in java.awt.Color.
-import com.holub.life.Cell;
-import com.holub.life.Storable;
-import com.holub.life.Direction;
-import com.holub.life.Neighborhood;
-import com.holub.life.Universe;
+import java.awt.Point;
 
 /*** ****************************************************************
  * The Resident class implements a single cell---a "resident" of a
@@ -19,9 +11,7 @@ import com.holub.life.Universe;
 
 public final class Resident implements Cell
 {
-	private static final Color BORDER_COLOR = Colors.DARK_YELLOW;
-	private static final Color LIVE_COLOR 	= Color.RED;
-	private static final Color DEAD_COLOR   = Colors.LIGHT_YELLOW;
+	private LifeRule rule = LifeRule.CONWAY;
 
 	private boolean amAlive 	= false;
 	private boolean willBeAlive	= false;
@@ -58,7 +48,7 @@ public final class Resident implements Cell
 		if( southeast.isAlive()) ++neighbors;
 		if( southwest.isAlive()) ++neighbors;
 
-		willBeAlive = (neighbors==3 || (amAlive && neighbors==2));
+		willBeAlive = rule.nextState(amAlive, neighbors);
 		return !isStable();
 	}
 
@@ -78,33 +68,37 @@ public final class Resident implements Cell
 	}
 
 	public boolean transition()
-	{	boolean changed = isStable();
+	{	boolean changed = !isStable();
 		amAlive = willBeAlive;
 		return changed;
 	}
 
-	public void redraw(Graphics g, Rectangle here, boolean drawAll)
-    {   g = g.create();
-		g.setColor(amAlive ? LIVE_COLOR : DEAD_COLOR );
-		g.fillRect(here.x+1, here.y+1, here.width-1, here.height-1);
-
-		// Doesn't draw a line on the far right and bottom of the
-		// grid, but that's life, so to speak. It's not worth the
-		// code for the special case.
-
-		g.setColor( BORDER_COLOR );
-		g.drawLine( here.x, here.y, here.x, here.y + here.height );
-		g.drawLine( here.x, here.y, here.x + here.width, here.y  );
-		g.dispose();
+	public void accept(CellVisitor visitor, int x, int y)
+	{	visitor.visitResident(x, y, amAlive);
 	}
 
-	public void userClicked(Point here, Rectangle surface)
-	{	amAlive = !amAlive;
+	public boolean isAliveAt(int x, int y)
+	{	return amAlive;
+	}
+
+	public boolean setAliveAt(int x, int y, boolean alive)
+	{	if (amAlive == alive)
+			return false;
+		amAlive = willBeAlive = alive;
+		return true;
+	}
+
+	public void setRule(LifeRule rule)
+	{	this.rule = rule;
 	}
 
 	public void	   clear()			{amAlive = willBeAlive = false; }
 	public boolean isAlive()		{return amAlive;			    }
-	public Cell    create()			{return new Resident();			}
+	public Cell create()
+	{	Resident resident = new Resident();
+		resident.setRule(rule);
+		return resident;
+	}
 	public int 	   widthInCells()	{return 1;}
 
 	public Direction isDisruptiveTo()
