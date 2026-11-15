@@ -1,9 +1,6 @@
 package com.holub.life;
 
-import java.awt.*;
-import java.awt.event.*;
 import javax.swing.*;
-import com.holub.ui.MenuSite;
 import com.holub.tools.Publisher;
 
 /***
@@ -26,16 +23,18 @@ import com.holub.tools.Publisher;
 
 public class Clock
 {	private final Timer clock = new Timer(0, event -> tick());
+	private static Clock instance;
+	private Publisher publisher = new Publisher();
 
 	// The clock can't be an everything-is-static singleton because
 	// it creates a menu, and it can't do that until the menus
 	// are established.
 	//
 	private Clock()
-	{	createMenus();
+	{
 	}
 
-	private static Clock instance;
+	
 
 	/** The clock is a singleton. Get a reference to it by calling
 	 *  <code>Clock.instance()</code>. It's illegal to call
@@ -71,40 +70,21 @@ public class Clock
 	{	startTicking( 0 );
 	}
 
-	/** Create the menu that controls the clock speed and
-	 *  put it onto the menu site. 
+	/** Force the clock to "tick," even if it's not time for
+	 *  a tick. Useful for forcing a tick when the clock is
+	 *  stopped. (Life uses this for single stepping.)
 	 */
-	private void createMenus()
-	{
-		// First set up a single listener that will handle all the
-		// menu-selection events except "Exit"
-
-		ActionListener modifier =									//{=startSetup}
-			new ActionListener()
-			{	public void actionPerformed(ActionEvent e)
-				{
-					String name = ((JMenuItem)e.getSource()).getName();
-					char toDo = name.charAt(0);
-
-					if( toDo=='T' )
-						tick();				      // single tick
-					else
-						startTicking(   toDo=='A' ? 500:	  // agonizing
-										toDo=='S' ? 150:	  // slow
-										toDo=='M' ? 70 :	  // medium
-										toDo=='F' ? 30 : 0 ); // fast
+	public void tick()
+	{	publisher.publish
+		(	new Publisher.Distributor()
+			{	public void deliverTo( Object subscriber )
+				{	if( !menuIsActive() )
+						((Listener)subscriber).tick();
 				}
-			};
-																	// {=midSetup}
-		MenuSite.addLine(this,"Go","Halt",  			modifier);
-		MenuSite.addLine(this,"Go","Tick (Single Step)",modifier);
-		MenuSite.addLine(this,"Go","Agonizing",	 	  	modifier);
-		MenuSite.addLine(this,"Go","Slow",		 		modifier);
-		MenuSite.addLine(this,"Go","Medium",	 	 	modifier);
-		MenuSite.addLine(this,"Go","Fast",				modifier); // {=endSetup}
-	}	//{=endCreateMenus}
+			}
+		);
+	}
 
-	private Publisher publisher = new Publisher();
 
 	/** Add a listener that's notified every time the clock ticks:
 	 *  <PRE>
@@ -128,20 +108,7 @@ public class Clock
 	{	void tick();
 	}
 
-	/** Force the clock to "tick," even if it's not time for
-	 *  a tick. Useful for forcing a tick when the clock is
-	 *  stopped. (Life uses this for single stepping.)
-	 */
-	public void tick()
-	{	publisher.publish
-		(	new Publisher.Distributor()
-			{	public void deliverTo( Object subscriber )
-				{	if( !menuIsActive() )
-						((Listener)subscriber).tick();
-				}
-			}
-		);
-	}
+	
 
 	/** Check if any item on the menu bar has been selected.
 	 *  This is an incredible kluge. The problem is that Swing draws the
@@ -167,5 +134,15 @@ public class Clock
 	{	MenuElement[] path =
 					MenuSelectionManager.defaultManager().getSelectedPath();
 		return ( path != null && path.length > 0 );
+	}
+
+
+	/**
+	 * JUnit 테스트 격리를 위해 Singleton 인스턴스를 강제로 초기화합니다.
+	 * 패키지 접근 제어자(default)를 사용하여 UI 등의 외부 패키지에서는 호출할 수 없게 캡슐화를 방어하고,
+	 * 동일 패키지(com.holub.life) 내의 테스트 코드에서만 호출할 수 있도록 제한합니다.
+	 */
+	void clearInstanceForTest() {
+    	instance = null;
 	}
 }

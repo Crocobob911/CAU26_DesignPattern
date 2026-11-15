@@ -24,6 +24,7 @@ final class UniverseModel {
     }
 
     void tick() {
+        HistoryManager.saveState(this);
         if (recalculate)
             board.activateAll();
 
@@ -58,6 +59,7 @@ final class UniverseModel {
     }
 
     boolean setAlive(int x, int y, boolean alive) {
+        HistoryManager.saveState(this);
         checkCoordinates(x, y);
         return board.setAliveAt(x, y, alive);
     }
@@ -68,6 +70,7 @@ final class UniverseModel {
     }
 
     void clear() {
+        HistoryManager.saveState(this);
         board.clear();
         recalculate = rule != LifeRule.CONWAY;
         generation = 0;
@@ -86,5 +89,13 @@ final class UniverseModel {
         board.transfer(state, new Point(0, 0), Cell.LOAD);
         recalculate = true;
         this.generation = generation;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return width;
     }
 }
