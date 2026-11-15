@@ -135,4 +135,14 @@ public class Clock
 					MenuSelectionManager.defaultManager().getSelectedPath();
 		return ( path != null && path.length > 0 );
 	}
+
+
+	/**
+	 * JUnit 테스트 격리를 위해 Singleton 인스턴스를 강제로 초기화합니다.
+	 * 패키지 접근 제어자(default)를 사용하여 UI 등의 외부 패키지에서는 호출할 수 없게 캡슐화를 방어하고,
+	 * 동일 패키지(com.holub.life) 내의 테스트 코드에서만 호출할 수 있도록 제한합니다.
+	 */
+	void clearInstanceForTest() {
+    	instance = null;
+	}
 }
