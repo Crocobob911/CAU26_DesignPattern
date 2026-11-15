@@ -4,5 +4,6 @@ public class HaltCommand implements Command {
     @Override
     public void execute() {
         Clock.instance().stop();
+        HistoryManager.setIgnoreSave(false);
     }
 }
