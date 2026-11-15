@@ -17,6 +17,11 @@ public class HistoryManager {
         redoStack.clear(); 
     }
 
+    public static void clearHistory() {
+        undoStack.clear();
+        redoStack.clear();
+    }
+
     public static boolean canUndo() { return !undoStack.isEmpty(); }
     public static boolean canRedo() { return !redoStack.isEmpty(); }
 

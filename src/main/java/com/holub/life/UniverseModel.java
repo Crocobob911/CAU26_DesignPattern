@@ -90,4 +90,12 @@ final class UniverseModel {
         recalculate = true;
         this.generation = generation;
     }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return width;
+    }
 }
