@@ -25,8 +25,12 @@ public class Rule implements LifeRule {
 		
 		name = _name;
 		ruleDescript = ruleDesc;
-		constructRule();
-		rule = (alive, neighbors) -> alive ? Survive[neighbors] : Birth[neighbors];
+		int res = constructRule();
+		if(res == -1) {
+			System.out.println("rule 생성 중 오류가 발생하였습니다. false 반환 객체로 변환합니다.");
+			rule = (alive,neighbors)->false;
+		}
+		else rule = (alive, neighbors) -> alive ? Survive[neighbors] : Birth[neighbors];
 	}
 	
 	/*
@@ -46,7 +50,7 @@ public class Rule implements LifeRule {
 			}else Birth[i] = false;
 			
 			if(rule.nextState(true,  i)) {
-				BirthStr += i;
+				SurviveStr += i;
 				Survive[i] = true;
 			} else Survive[i] = false;
 		}
@@ -59,18 +63,38 @@ public class Rule implements LifeRule {
 	 * ConstructRule()
 	 * RuleDest(string)으로 정의시, rule을 정의하기위해 boolean table을 초기화.
 	 */
-	private void constructRule() {
-		String[] BandS = ruleDescript.split("/");
+	private int constructRule() {
+		String[] BandS = ruleDescript.split("/", -1);
 		if(BandS.length != 2) {
 			System.out.println("형식이 맞지 않습니다.");
-			return;
+			return -1;
+		}
+		if(BandS[0].length() < 1 || BandS[0].charAt(0) != 'B'
+				|| BandS[1].length()<1 || BandS[1].charAt(0)!= 'S') {
+			System.out.println("형식이 맞지 않습니다.");
+			return -1;
 		}
 		
-		for(int i=1;i<BandS[0].length();i++) 
-			Birth[Character.getNumericValue(BandS[0].charAt(i))] = true;
 		
-		for(int i=1;i<BandS[1].length();i++)
-			Survive[Character.getNumericValue(BandS[1].charAt(i))] = true;
+		for(int i=1;i<BandS[0].length();i++) {
+			int current = Character.getNumericValue(BandS[0].charAt(i));
+			if(current<0 || current>8) {
+				System.out.println("입력범위 초과 혹은 잘못된 형식입니다.");
+				return -1;
+			}
+			Birth[current] = true;
+		}		
+		
+		for(int i=1;i<BandS[1].length();i++) {
+			int current = Character.getNumericValue(BandS[1].charAt(i));
+			if(current<0 || current>8) {
+				System.out.println("입력범위 초과 혹은 잘못된 형식입니다.");
+				return -1;
+			}
+			Survive[current] = true;
+		}		
+		
+		return 1;
 		
 	}
 	
@@ -85,8 +109,7 @@ public class Rule implements LifeRule {
 	
 	@Override
 	public boolean nextState(boolean alive, int neighbors) {
-		// TODO Auto-generated method stub
-		return false;
+		return rule.nextState(alive, neighbors);
 	}
 
 }
