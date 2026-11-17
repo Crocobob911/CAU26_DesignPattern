@@ -1,7 +1,16 @@
 package com.holub.life;
+import java.util.Map;
+import java.util.HashMap;
 
 public class Rule implements LifeRule {
 
+	private static final Map<String, Rule> RULES = new HashMap<>();
+	
+	// 기존 LifeRule의 Lambda를 통해 정의된 field를 LifeRule Map에 포함시키기위한 block
+	static {
+		new Rule("CONWAY", LifeRule.CONWAY);
+	}
+	
 	String name = ".";
 	String ruleDescript = "B/S";
 	
@@ -10,13 +19,22 @@ public class Rule implements LifeRule {
 	boolean Birth[];
 	boolean Survive[];
 	
+	public static void createRule(String _name, String ruleDesc) {
+		new Rule(_name, ruleDesc);
+	}
+	
+	public static Rule getRule(String _name) {
+		return Rule.RULES.get(_name);
+	}
+	
 	Rule(String _name, LifeRule _rule){
 		Birth = new boolean[9];
 		Survive = new boolean[9];
 		
 		name = _name;
 		rule = _rule;
-		ruleDescript = reConstructRuleDesc();		
+		ruleDescript = reConstructRuleDesc();
+		registerStatic();
 	}
 	
 	Rule(String _name, String ruleDesc){
@@ -27,10 +45,25 @@ public class Rule implements LifeRule {
 		ruleDescript = ruleDesc;
 		int res = constructRule();
 		if(res == -1) {
-			System.out.println("rule 생성 중 오류가 발생하였습니다. false 반환 객체로 변환합니다.");
+			System.out.println("rule 생성 중 오류가 발생하였습니다. false 반환 객체로 변환합니다. 또한, 규칙이 등록되지 않습니다.");
 			rule = (alive,neighbors)->false;
 		}
-		else rule = (alive, neighbors) -> alive ? Survive[neighbors] : Birth[neighbors];
+		else {
+			rule = (alive, neighbors) -> alive ? Survive[neighbors] : Birth[neighbors];
+			registerStatic();
+		}
+		
+	}
+	
+	/*
+	 * register
+	 * static field의 Map에 regiter시킴
+	 * static field Map의 key와 객체의 이름이달라지는 경우를 방지하기 위해 객체 내에서 등록과정을 진행.
+	 */
+	
+	
+	private void registerStatic() {
+		RULES.put(name, this);
 	}
 	
 	/*
@@ -107,6 +140,7 @@ public class Rule implements LifeRule {
 		return name;
 	}
 	
+	//기존 인터페이스에 핵심동작 위임 - decorator
 	@Override
 	public boolean nextState(boolean alive, int neighbors) {
 		return rule.nextState(alive, neighbors);
