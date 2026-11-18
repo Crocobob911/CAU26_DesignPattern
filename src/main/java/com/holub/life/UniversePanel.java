@@ -1,6 +1,5 @@
 package com.holub.life;
 
-import com.holub.io.Files;
 import com.holub.ui.MenuSite;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -8,9 +7,6 @@ import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +26,9 @@ final class UniversePanel extends JPanel {
     private static final String GRID_LINES = "Grid Lines";
     private static final String CELL_AGE = "Cell Age Colors";
 
+    private final FileCommands fileCommands;
+    private final ClockCommands clockCommands;
+    private final GridCommands gridCommands;
     private final LifeMediator mediator;
     private final LifeFacade facade;
     private BoardTheme theme = THEMES.get(0);
@@ -38,6 +37,15 @@ final class UniversePanel extends JPanel {
     private final CellAgeTracker cellAges;
 
     UniversePanel(LifeMediator mediator) {
+        this(mediator, new FileCommands(mediator.facade().model()),
+                new ClockCommands(mediator.facade().model()), new GridCommands(mediator.facade().model()));
+    }
+
+    UniversePanel(LifeMediator mediator, FileCommands fileCommands,
+            ClockCommands clockCommands, GridCommands gridCommands) {
+        this.fileCommands = fileCommands;
+        this.clockCommands = clockCommands;
+        this.gridCommands = gridCommands;
         this.mediator = mediator;
         this.facade = mediator.facade();
         this.cellAges = new CellAgeTracker(facade);
@@ -66,10 +74,18 @@ final class UniversePanel extends JPanel {
 
     void installMenus() {
         MenuSite.addLine(this, "Grid", "Clear", event -> mediator.clear());
-        MenuSite.addLine(this, "Grid", "Load", event -> load());
-        MenuSite.addLine(this, "Grid", "Store", event -> store());
+        MenuSite.addLine(this, "Grid", "Load", event -> fileCommands.getLoad().execute());
+        MenuSite.addLine(this, "Grid", "Store", event -> fileCommands.getSave().execute());
         MenuSite.addLine(this, "Grid", "Size...", event -> chooseSize());
         MenuSite.addLine(this, "Grid", "Exit", event -> System.exit(0));
+        MenuSite.addLine(this, "Grid", "Undo", event -> gridCommands.getUndo().execute());
+        MenuSite.addLine(this, "Grid", "Redo", event -> gridCommands.getRedo().execute());
+        MenuSite.addLine(this, "Go", "Halt", event -> clockCommands.getHalt().execute());
+        MenuSite.addLine(this, "Go", "Tick (Single Step)", event -> clockCommands.getTick().execute());
+        MenuSite.addLine(this, "Go", "Agonizing", event -> clockCommands.runAgonizing().execute());
+        MenuSite.addLine(this, "Go", "Slow", event -> clockCommands.runSlow().execute());
+        MenuSite.addLine(this, "Go", "Medium", event -> clockCommands.runMedium().execute());
+        MenuSite.addLine(this, "Go", "Fast", event -> clockCommands.runFast().execute());
         installViewMenus();
     }
 
@@ -171,22 +187,6 @@ final class UniversePanel extends JPanel {
         return Math.max(1, Math.min(getWidth(), getHeight()) / facade.width());
     }
 
-    private void load() {
-        try (var input = new FileInputStream(Files.userSelected(".", ".life", "Life File", "Load"))) {
-            mediator.load(input);
-        } catch (IOException exception) {
-            showError("Read Failed!");
-        }
-    }
-
-    private void store() {
-        try (var output = new FileOutputStream(Files.userSelected(".", ".life", "Life File", "Write"))) {
-            mediator.store(output);
-        } catch (IOException exception) {
-            showError("Write Failed!");
-        }
-    }
-
     private void chooseSize() {
         JSpinner block = new JSpinner(new SpinnerNumberModel(facade.blockSize(), 2, UniverseBuilder.MAX_WIDTH, 1));
         JSpinner levels = new JSpinner(new SpinnerNumberModel(facade.levels(), 1, 8, 1));
@@ -215,14 +215,14 @@ final class UniversePanel extends JPanel {
                         .cellPixels((Integer) pixels.getValue()));
                 return;
             } catch (ParseException exception) {
-                showError("Enter a valid number in each field.");
+                showSizeError("Enter a valid number in each field.");
             } catch (IllegalArgumentException exception) {
-                showError(exception.getMessage());
+                showSizeError(exception.getMessage());
             }
         }
     }
 
-    private void showError(String message) {
+    private void showSizeError(String message) {
         JOptionPane.showMessageDialog(this, message, "The Game of Life", JOptionPane.ERROR_MESSAGE);
     }
 }

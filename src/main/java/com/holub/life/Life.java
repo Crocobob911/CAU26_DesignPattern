@@ -18,8 +18,12 @@ public final class Life extends JFrame {
         MenuSite.establish(this);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        LifeMediator mediator = new LifeMediator(new UniverseBuilder().build(), () -> Clock.instance().stop());
-        UniversePanel panel = new UniversePanel(mediator);
+        UniverseModel model = new UniverseBuilder().buildModel(LifeRule.CONWAY);
+        LifeMediator mediator = new LifeMediator(new LifeFacade(model), () -> Clock.instance().stop());
+        FileCommands fileCommands = new FileCommands(model);
+        ClockCommands clockCommands = new ClockCommands(model);
+        GridCommands gridCommands = new GridCommands(model);
+        UniversePanel panel = new UniversePanel(mediator, fileCommands, clockCommands, gridCommands);
         panel.installMenus();
         Clock.instance().addClockListener(mediator::tick);
 

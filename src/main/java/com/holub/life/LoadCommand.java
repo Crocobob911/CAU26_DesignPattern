@@ -6,8 +6,8 @@ import com.holub.io.Files;
 public class LoadCommand implements Command {
     private final UniverseModel model;
 
-    public LoadCommand(UniverseModel model) { 
-        this.model = model; 
+    public LoadCommand(UniverseModel model) {
+        this.model = model;
     }
 
     @Override
@@ -15,14 +15,15 @@ public class LoadCommand implements Command {
         try {
 
             File file = Files.userSelected(".", null, "Life Game Files (.life, .cells, .rle)", "Load");
-            if (file == null) return; 
+            if (file == null) return;
 
             FileFormat strategy = getStrategy(file.getName());
             Storable memento = strategy.load(file);
 
-            model.restore(memento, 0);
-
-            HistoryManager.clearHistory(); 
+            Clock.instance().stop();
+            HistoryManager.setIgnoreSave(false);
+            HistoryManager.clearHistory();
+            model.restore(memento, 0, LifeFacade.Change.LOAD);
 
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Load Failed: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);

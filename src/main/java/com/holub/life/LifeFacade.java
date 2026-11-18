@@ -31,10 +31,11 @@ public final class LifeFacade {
     }
 
     private final List<Consumer<Event>> listeners = new ArrayList<>();
-    private UniverseModel model;
+    private final UniverseModel model;
 
     LifeFacade(UniverseModel model) {
         this.model = model;
+        model.addListener(this::publish);
     }
 
     public int width() {
@@ -51,7 +52,6 @@ public final class LifeFacade {
 
     public void tick() {
         model.tick();
-        publish(Change.TICK);
     }
 
     public void toggle(int x, int y) {
@@ -59,13 +59,11 @@ public final class LifeFacade {
     }
 
     public void setAlive(int x, int y, boolean alive) {
-        if (model.setAlive(x, y, alive))
-            publish(Change.EDIT);
+        model.setAlive(x, y, alive);
     }
 
     public void clear() {
         model.clear();
-        publish(Change.CLEAR);
     }
 
     public Snapshot createSnapshot() {
@@ -76,12 +74,10 @@ public final class LifeFacade {
         if (snapshot.width != width())
             throw new IllegalArgumentException("Snapshot width does not match the current board");
         model.restore(snapshot.state, snapshot.generation);
-        publish(Change.RESTORE);
     }
 
     public void setRule(LifeRule rule) {
         model.setRule(rule);
-        publish(Change.RULE);
     }
 
     public void visitCells(CellVisitor visitor) {
@@ -101,8 +97,7 @@ public final class LifeFacade {
     public void load(InputStream input) throws IOException {
         Storable state = Neighborhood.emptyMemento();
         state.load(input);
-        model.restore(state, 0);
-        publish(Change.LOAD);
+        model.restore(state, 0, Change.LOAD);
     }
 
     /** Store live coordinates in the original .life format. The caller owns the stream. */
@@ -111,8 +106,11 @@ public final class LifeFacade {
     }
 
     void resize(UniverseBuilder builder) {
-        model = builder.buildModel(model.rule());
-        publish(Change.RESIZE);
+        model.resize(builder);
+    }
+
+    UniverseModel model() {
+        return model;
     }
 
     int blockSize() {
