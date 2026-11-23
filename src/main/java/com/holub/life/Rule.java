@@ -9,6 +9,7 @@ public class Rule implements LifeRule {
 	// 기존 LifeRule의 Lambda를 통해 정의된 field를 LifeRule Map에 포함시키기위한 block
 	static {
 		new Rule("CONWAY", LifeRule.CONWAY);
+		
 	}
 	
 	String name = ".";
