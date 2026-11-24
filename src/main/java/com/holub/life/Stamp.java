@@ -5,6 +5,8 @@ import java.util.Iterator;
 
 public abstract class Stamp {
 	
+	private static Stamp current;
+	
 	private Pattern pattern;
 	private Point pivot;
 	protected LifeFacade facade;
@@ -15,6 +17,14 @@ public abstract class Stamp {
 	public void stamp(UniverseModel board, int _x, int _y) {
 		pattern = createPattern();
 		changeMultipleCell(board, _x, _y);
+	}
+	
+	public static void setCurr(Stamp target) {
+		current = target;
+	}
+	
+	public static Stamp getCurr() {
+		return current;
 	}
 	
 	private void changeMultipleCell(UniverseModel board, int _x, int _y) {
