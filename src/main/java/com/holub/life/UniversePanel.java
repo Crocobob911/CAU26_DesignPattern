@@ -10,6 +10,9 @@ import java.awt.event.MouseEvent;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Iterator;
+import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -22,13 +25,15 @@ import javax.swing.SpinnerNumberModel;
 final class UniversePanel extends JPanel {
     /** Themes offered in the View > Theme menu. The first one is the default. */
     static final List<BoardTheme> THEMES = List.of(new ClassicTheme(), new DarkTheme(), new HighContrastTheme());
-
+    static final List<String> STAMPS = List.of("default", "glider", "toad", "block", "blink", "LWSS");
+    
     private static final String GRID_LINES = "Grid Lines";
     private static final String CELL_AGE = "Cell Age Colors";
-
     private final FileCommands fileCommands;
     private final ClockCommands clockCommands;
     private final GridCommands gridCommands;
+    private final StampCommands stampCommands;
+    private final RuleCommands ruleCommands;
     private final LifeMediator mediator;
     private final LifeFacade facade;
     private BoardTheme theme = THEMES.get(0);
@@ -38,14 +43,19 @@ final class UniversePanel extends JPanel {
 
     UniversePanel(LifeMediator mediator) {
         this(mediator, new FileCommands(mediator.facade().model()),
-                new ClockCommands(mediator.facade().model()), new GridCommands(mediator.facade().model()));
+                new ClockCommands(mediator.facade().model()), new GridCommands(mediator.facade().model()),
+                		new StampCommands(mediator), new RuleCommands(mediator.facade().model()));
     }
 
     UniversePanel(LifeMediator mediator, FileCommands fileCommands,
-            ClockCommands clockCommands, GridCommands gridCommands) {
-        this.fileCommands = fileCommands;
+            ClockCommands clockCommands, GridCommands gridCommands,
+            StampCommands stampCommands, RuleCommands ruleCommands) {
+    	
+        this.stampCommands = stampCommands;
+    	this.fileCommands = fileCommands;
         this.clockCommands = clockCommands;
         this.gridCommands = gridCommands;
+        this.ruleCommands = ruleCommands;
         this.mediator = mediator;
         this.facade = mediator.facade();
         this.cellAges = new CellAgeTracker(facade);
@@ -58,7 +68,9 @@ final class UniversePanel extends JPanel {
                 int x = event.getX() / size;
                 int y = event.getY() / size;
                 if (event.getX() >= 0 && event.getY() >= 0 && x < facade.width() && y < facade.width())
-                    mediator.toggle(x, y);
+                	stampCommands.stampAct(facade.model(), x, y).execute();
+                	//mediator.toggle(x, y);
+                	
             }
         });
 
@@ -73,6 +85,7 @@ final class UniversePanel extends JPanel {
     }
 
     void installMenus() {
+    	Iterator<String> ruleIter = BSRule.getKeys();
         MenuSite.addLine(this, "Grid", "Clear", event -> mediator.clear());
         MenuSite.addLine(this, "Grid", "Load", event -> fileCommands.getLoad().execute());
         MenuSite.addLine(this, "Grid", "Store", event -> fileCommands.getSave().execute());
@@ -86,8 +99,28 @@ final class UniversePanel extends JPanel {
         MenuSite.addLine(this, "Go", "Slow", event -> clockCommands.runSlow().execute());
         MenuSite.addLine(this, "Go", "Medium", event -> clockCommands.runMedium().execute());
         MenuSite.addLine(this, "Go", "Fast", event -> clockCommands.runFast().execute());
+        
+        for(String stamp : STAMPS) {
+        	MenuSite.addLine(this, "Stamp", stamp, event ->{
+        		stampCommands.setStamp(stamp).execute();
+        		refreshViewMenuLabels();
+        	});
+        } //STAMP Menus
+        
+        while(ruleIter.hasNext()) {
+        	String item = ruleIter.next();
+        	MenuSite.addLine(this, "Rule", item, event -> {
+        		ruleCommands.setRule(item).execute();
+        		refreshViewMenuLabels();
+        	});
+        }
+        MenuSite.addLine(this,  "Rule",  "add rule", event -> addRules());
+        //Rule Menus
+        
         installViewMenus();
+        
     }
+    
 
     /**
      * View menu for E8. These only change how this panel draws, so they call the panel directly.
@@ -113,8 +146,17 @@ final class UniversePanel extends JPanel {
 
     /** Shows the current choice in the menu text, e.g. "• Dark" and "Grid Lines: On". */
     private void refreshViewMenuLabels() {
+    	Iterator<String> ruleIter = BSRule.getKeys();
+    	while(ruleIter.hasNext()) {
+    		String curr = ruleIter.next(); 
+    		setMenuText("Rule", curr, choiceLabel(curr, BSRule.get(curr) == facade.model().rule()));
+    	}
+    	for (String stamp : STAMPS)
+    		setMenuText("Stamp", stamp, choiceLabel(stamp, stamp == stampCommands.currStr()));
+    	
         for (BoardTheme each : THEMES)
             setMenuText("View:Theme", each.name(), choiceLabel(each.name(), each == theme));
+        
         setMenuText("View", GRID_LINES, toggleLabel(GRID_LINES, showGridLines));
         setMenuText("View", CELL_AGE, toggleLabel(CELL_AGE, showCellAge));
     }
@@ -221,7 +263,56 @@ final class UniversePanel extends JPanel {
             }
         }
     }
+    
+    private void addRules() {
+    	JTextField ruleName = new JTextField("CONWAY", 16);
+    	JTextField ruleDesc = new JTextField("B36/S23", 16);
+    	JPanel panel = new JPanel(new GridLayout(2, 2, 8, 4));
 
+    	panel.add(new JLabel("Rule Name"));
+    	panel.add(ruleName);
+
+    	panel.add(new JLabel("Rule"));
+    	panel.add(ruleDesc);
+    	
+    	while(JOptionPane.showConfirmDialog(
+    		    this,
+    		    panel,
+    		    "Add Rule",
+    		    JOptionPane.OK_CANCEL_OPTION,
+    		    JOptionPane.PLAIN_MESSAGE
+    		) == JOptionPane.OK_OPTION) {
+    		try{
+    			String rName = ruleName.getText();
+	    		String rDesc = ruleDesc.getText();
+	    		
+	    		if(BSRule.get(rName) != null) {
+	    			showSizeError("Rule "+rName+" already Exist.");
+	    		}
+	    		else {
+	    			ruleCommands.addRule(rName, rDesc).execute();
+	    			JMenuItem add = MenuSite.getMyMenuItem(this,  "Rule", "add rule");
+	    			
+	    			JPopupMenu menu = (JPopupMenu) add.getParent();
+	    			
+	    			menu.remove(add);
+	    			
+	    			MenuSite.addLine(this, "Rule", rName, event -> {
+	    				ruleCommands.setRule(rName).execute();
+	    				refreshViewMenuLabels();
+	    			});
+	    			menu.add(add);
+	    			menu.revalidate();
+	    			menu.repaint();
+	    			return;
+	    		}
+    		}catch(Exception e){
+    			showSizeError(e.getMessage());
+    		}
+    	}
+    }
+
+    
     private void showSizeError(String message) {
         JOptionPane.showMessageDialog(this, message, "The Game of Life", JOptionPane.ERROR_MESSAGE);
     }

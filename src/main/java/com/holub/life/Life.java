@@ -23,7 +23,9 @@ public final class Life extends JFrame {
         FileCommands fileCommands = new FileCommands(model);
         ClockCommands clockCommands = new ClockCommands(model);
         GridCommands gridCommands = new GridCommands(model);
-        UniversePanel panel = new UniversePanel(mediator, fileCommands, clockCommands, gridCommands);
+        RuleCommands ruleCommands = new RuleCommands(model);
+        StampCommands stampCommands = new StampCommands(mediator);
+        UniversePanel panel = new UniversePanel(mediator, fileCommands, clockCommands, gridCommands, stampCommands, ruleCommands);
         panel.installMenus();
         Clock.instance().addClockListener(mediator::tick);
 
