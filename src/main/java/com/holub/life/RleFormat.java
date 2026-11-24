@@ -7,38 +7,51 @@ import java.util.List;
 
 public class RleFormat extends TextFormat {
 
-
     @Override
-    protected void readHeader(BufferedReader reader) throws IOException {
+    protected String readHeader(BufferedReader reader) throws IOException {
         reader.mark(4096);
         String line;
+        String patternName = "Unknown RLE Pattern"; // 기본 이름
+        
         while ((line = reader.readLine()) != null) {
             line = line.trim();
-            // #으로 시작하는 주석은 건너뜁니다.
+            
+            // #N 으로 시작하면 패턴 이름을 추출합니다.
+            if (line.startsWith("#N")) {
+                patternName = line.substring(2).trim();
+                reader.mark(4096);
+                continue;
+            }
+            // 다른 주석(#)은 건너뜁니다.
             if (line.startsWith("#")) {
                 reader.mark(4096);
                 continue;
             }
+            // x = ... 형태의 메타데이터 줄을 만나면 헤더가 끝난 것입니다.
             if (line.startsWith("x")) {
-                return;
+                break;
             }
         }
-        reader.reset();
+        return patternName;
     }
 
     @Override
-    protected List<Point> readBody(BufferedReader reader) throws IOException {
+    protected ParsedData readBody(BufferedReader reader) throws IOException {
         List<Point> liveCells = new ArrayList<>();
         StringBuilder compressedData = new StringBuilder();
         String line;
         
+        // 1. 본문 데이터 압축 문자열 잇기
         while ((line = reader.readLine()) != null) {
             if (line.startsWith("#") || line.startsWith("x")) continue;
             compressedData.append(line.trim());
             if (line.contains("!")) break; 
         }
 
+        // 2. 압축 해제 및 바운딩 박스(최대 가로/세로) 계산
         int x = 0, y = 0, count = 0;
+        int maxX = 0, maxY = 0; // 넓이/높이 측정을 위한 변수 추가
+        
         for (int i = 0; i < compressedData.length(); i++) {
             char c = compressedData.charAt(i);
             
@@ -52,7 +65,11 @@ public class RleFormat extends TextFormat {
                     x += run;
                 } else if (c == 'o') { 
                     for (int j = 0; j < run; j++) {
-                        liveCells.add(new Point(x++, y));
+                        liveCells.add(new Point(x, y));
+                        // 최대 도달 좌표 갱신
+                        maxX = Math.max(maxX, x);
+                        maxY = Math.max(maxY, y);
+                        x++;
                     }
                 } else if (c == '$') {
                     y += run;
@@ -62,7 +79,9 @@ public class RleFormat extends TextFormat {
                 }
             }
         }
-        return liveCells;
+        
+
+        return new ParsedData(liveCells, maxX + 1, maxY + 1);
     }
 
 
