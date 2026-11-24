@@ -9,7 +9,8 @@ public class FileCommandsTest {
     public void testFileCommandsRegistry() {
 
         Neighborhood board = new Neighborhood(8, new Neighborhood(8, Cell.DUMMY));
-
+        UniverseModel dummyModel = new UniverseModel(board, 64, 8, 2, 8, LifeRule.CONWAY);
+        
         FileCommands commands = new FileCommands(dummyModel);
 
         assertNotNull(commands.getSave(), "SaveCommand가 생성되어야 합니다.");
