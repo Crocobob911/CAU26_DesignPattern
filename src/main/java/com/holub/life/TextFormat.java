@@ -4,13 +4,25 @@ import java.awt.Point;
 import java.util.List;
 
 public abstract class TextFormat implements FileFormat {
+
+    public static class ParsedData {
+        public final List<Point> liveCells;
+        public final int width;
+        public final int height;
+
+        public ParsedData(List<Point> liveCells, int width, int height) {
+            this.liveCells = liveCells;
+            this.width = width;
+            this.height = height;
+        }
+    }
     
     @Override
     public final Storable load(File file) throws Exception {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            readHeader(reader);
-            List<Point> liveCells = readBody(reader);
-            return new TextToMementoAdapter(liveCells);
+            String name = readHeader(reader);
+            ParsedData data = readBody(reader);
+            return new TextToMementoAdapter(data.liveCells, name, data.width, data.height);
         }
     }
 
@@ -23,8 +35,8 @@ public abstract class TextFormat implements FileFormat {
         }
     }
 
-    protected abstract void readHeader(BufferedReader reader) throws IOException;
-    protected abstract List<Point> readBody(BufferedReader reader) throws IOException;
+    protected abstract String readHeader(BufferedReader reader) throws IOException;
+    protected abstract ParsedData readBody(BufferedReader reader) throws IOException;
     
     protected abstract void writeHeader(BufferedWriter writer) throws IOException;
     protected abstract void writeBody(BufferedWriter writer, Cell.Memento memento, int w, int h) throws IOException;

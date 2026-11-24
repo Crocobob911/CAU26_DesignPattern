@@ -7,16 +7,23 @@ import java.awt.Point;
 import java.util.List;
 
 
-public class TextToMementoAdapter implements Cell.Memento {
+public class TextToMementoAdapter implements Cell.Memento, PatternInfo {
+
     
 
     private final Cell.Memento internalMemento; 
+    private final String name;
+    private final int width;
+    private final int height;
 
-    public TextToMementoAdapter(List<Point> parsedLiveCells) {
+    public TextToMementoAdapter(List<Point> parsedLiveCells, String name, int width, int height) {
         this.internalMemento = Neighborhood.emptyMemento(); 
         for (Point p : parsedLiveCells) {
             internalMemento.markAsAlive(p);
         }
+        this.name = name;
+        this.width = width;
+        this.height = height;
     }
 
     @Override
@@ -39,4 +46,8 @@ public class TextToMementoAdapter implements Cell.Memento {
     public void flush(OutputStream out) throws IOException {
         throw new UnsupportedOperationException("Text adapter does not use byte streams.");
     }
+
+    @Override public String getName() { return name; }
+    @Override public int getWidth() { return width; }
+    @Override public int getHeight() { return height; }
 }
