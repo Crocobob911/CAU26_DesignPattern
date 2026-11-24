@@ -1,10 +1,11 @@
 package com.holub.life;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Iterator;
 
 public class BSRule implements LifeRule {
-	private static final Map<String, BSRule> RULES = new HashMap<>();
+	private static final Map<String, BSRule> RULES = new LinkedHashMap<>();
 	
 	// 기존 LifeRule의 Lambda를 통해 정의된 field를 LifeRule Map에 포함시키기위한 block
 	static {
@@ -28,11 +29,14 @@ public class BSRule implements LifeRule {
 	 */
 	public static void register(String _name, String ruleDesc) {
 		BSRule.RULES.put(_name , new BSRule(_name, ruleDesc));
-		
 	}
 	
 	public static BSRule get(String _name) {
 		return BSRule.RULES.get(_name);
+	}
+	
+	public static Iterator<String> getKeys() {
+		return BSRule.RULES.keySet().iterator();
 	}
 	
 	BSRule(String _name, String ruleDesc){
