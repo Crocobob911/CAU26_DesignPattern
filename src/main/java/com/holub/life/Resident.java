@@ -87,9 +87,11 @@ public final class Resident implements Cell
 		amAlive = willBeAlive = alive;
 		return true;
 	}
-
+	
+	// null이 입력될 수 있음에 따라서, 기존 setRule에 null 여부 확인을 추가. null이 아닐때만 변경.
 	public void setRule(LifeRule rule)
-	{	this.rule = rule;
+	{	
+		if(rule != null) this.rule = rule;
 	}
 
 	public void	   clear()			{amAlive = willBeAlive = false; }
