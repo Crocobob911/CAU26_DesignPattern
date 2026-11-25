@@ -1,6 +1,6 @@
 package com.holub.life;
+
 import java.io.File;
-import java.io.FileNotFoundException;
 import javax.swing.JOptionPane;
 import com.holub.io.Files;
 
@@ -14,25 +14,13 @@ public class LoadCommand implements Command {
     /** Only reads the file; stopping the clock and resetting Undo is the Mediator's job. */
     @Override
     public void execute() {
-        File file;
         try {
-            file = Files.userSelected(".", null, "Life Game Files (.life, .cells, .rle)", "Load");
-        } catch (FileNotFoundException cancelled) {
-            return;
-        }
-
-        File file = Files.userSelected(".", "", "All Files", "Load");
-        if (file == null) return;
-
-        FileFormat strategy = getStrategy(file.getName());
-        Clock.instance().stop();
-        HistoryManager.setIgnoreSave(false);
-        HistoryManager.clearHistory();
-        model.restore(memento, 0, LifeFacade.Change.LOAD);
-
-        try {
+            File file = Files.userSelected(".", "", "All Files (Please type extension: .life, .cells, or .rle)", "Load");
+            if (file == null) return;
+            
             Storable memento = FileFormat.forFileName(file.getName()).load(file);
             mediator.load(memento);
+
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Load Failed: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
