@@ -11,8 +11,8 @@ import java.util.ArrayList;
 public class TextToMementoAdapter implements Cell.Memento, PatternInfo {
 
     
-
-    private final Cell.Memento internalMemento; 
+	private final List<Point> relativePoints;
+    private final Cell.Memento internalMemento;
     private final String name;
     private final int width;
     private final int height;
