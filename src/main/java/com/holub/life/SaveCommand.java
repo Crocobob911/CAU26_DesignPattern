@@ -16,10 +16,11 @@ public class SaveCommand implements Command {
     public void execute() {
         File file;
         try {
-            file = Files.userSelected(".", null, "Save Game (.life, .cells, .rle)", "Write");
-        } catch (FileNotFoundException cancelled) {
-            return;
-        }
+            File file = Files.userSelected(".", "", "Save Game (Please type extension: .life, .cells, or .rle)", "Write");
+            if (file == null) return; 
+
+            FileFormat format = getStrategy(file.getName());
+            format.save(file, model);
 
         try {
             mediator.store(FileFormat.forFileName(file.getName()), file);

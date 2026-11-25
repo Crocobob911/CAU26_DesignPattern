@@ -21,6 +21,15 @@ public class LoadCommand implements Command {
             return;
         }
 
+        File file = Files.userSelected(".", "", "All Files", "Load");
+        if (file == null) return;
+
+        FileFormat strategy = getStrategy(file.getName());
+        Clock.instance().stop();
+        HistoryManager.setIgnoreSave(false);
+        HistoryManager.clearHistory();
+        model.restore(memento, 0, LifeFacade.Change.LOAD);
+
         try {
             Storable memento = FileFormat.forFileName(file.getName()).load(file);
             mediator.load(memento);
