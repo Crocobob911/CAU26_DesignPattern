@@ -54,6 +54,13 @@ public class Pattern {
 		//2차원 배열 기반 코드
 	}
 	
+	// TestToMementoAdapter 수정 이후, W와 H는 찾아오는게 아니라 받아온다.
+	Pattern(TextToMementoAdapter loaded){
+		pattern = loaded.pointList();
+		width = loaded.getWidth();
+		height = loaded.getHeight();
+	}
+	
 	public Iterator<Point> getIterator(){
 		return pattern.iterator();
 	}

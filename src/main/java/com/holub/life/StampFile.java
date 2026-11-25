@@ -11,7 +11,7 @@ public class StampFile extends Stamp {
 	
 	@Override
 	public Pattern createPattern() {
-		return new Pattern(loadedFile.pointList());
+		return new Pattern(loadedFile);
 	}
 
 }
