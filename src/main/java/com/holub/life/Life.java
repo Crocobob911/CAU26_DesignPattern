@@ -1,6 +1,7 @@
 package com.holub.life;
 
 import com.holub.ui.MenuSite;
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GraphicsEnvironment;
 import javax.swing.JFrame;
@@ -28,6 +29,8 @@ public final class Life extends JFrame {
         UniversePanel panel = new UniversePanel(mediator, fileCommands, clockCommands, gridCommands, stampCommands, ruleCommands);
         panel.installMenus();
         Clock.instance().addClockListener(mediator::tick);
+        StatsPanel stats = new StatsPanel(mediator.facade(),
+                new BoardStatistic(mediator), new BoardCycleDetector(mediator));
 
         JScrollPane scroll = new JScrollPane(panel);
         scroll.setBorder(null);
@@ -35,7 +38,8 @@ public final class Life extends JFrame {
         var screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
         scroll.setPreferredSize(new Dimension(Math.min(board.width, screen.width - 48),
                 Math.min(board.height, screen.height - 96)));
-        add(scroll);
+        add(scroll, BorderLayout.CENTER);
+        add(stats, BorderLayout.SOUTH);
         pack();
         setVisible(true);
     }
