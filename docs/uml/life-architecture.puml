@@ -11,6 +11,8 @@ package "Swing UI" {
     #paintComponent(graphics : Graphics)
   }
   class CellRenderer
+  class ClockPanel
+  class StatsPanel
 }
 
 package "게임 제어와 보드 구성" {
@@ -18,7 +20,9 @@ package "게임 제어와 보드 구성" {
     +tick()
     +toggle(x : int, y : int)
     +clear()
+    +load(state : Storable)
     +load(input : InputStream)
+    +store(format : FileFormat, file : File)
     +store(output : OutputStream)
     +resize(builder : UniverseBuilder)
   }
@@ -37,6 +41,7 @@ package "게임 제어와 보드 구성" {
     +removeListener(listener : Consumer<Event>)
     +visitCells(visitor : CellVisitor)
     +load(input : InputStream)
+    +load(state : Storable)
     +store(output : OutputStream)
   }
   class "LifeFacade.Snapshot" as Snapshot {
@@ -100,6 +105,9 @@ Life ..> UniversePanel : 생성
 Life ..> LifeMediator : 생성
 Life ..> UniverseBuilder : 기본 보드 구성
 Life ..> Clock : 틱 콜백 연결
+Life ..> ClockPanel : 생성, NORTH\n(E4, e4-e5-clock-history.puml 참고)
+Life ..> StatsPanel : 생성, SOUTH\n(E3, e3-statistics-observer.puml 참고)
+StatsPanel --> LifeFacade : 이벤트 구독
 UniversePanel --> LifeMediator : 입력 전달
 UniversePanel --> LifeFacade : 보드 조회 및 이벤트 구독
 UniversePanel ..> CellVisitor : 테마로 렌더러 조립\n(E8, e8-theme-renderer.puml 참고)
@@ -128,8 +136,11 @@ LifeArchitectureTest ..> LifeFacade : 상태 및 이벤트 검증
 LifeArchitectureTest ..> LifeMediator : 보드 교체 검증
 
 note right of LifeMediator
-  Clock 정지는 Life에서 주입한
-  Runnable 콜백을 호출한다.
+  Clock 정지는 Life에서 주입한 Runnable 콜백
+  (HaltCommand → E4 정지 상태)을 호출한다.
+  Load: 시계 정지 → Undo 기록 비우기 → 보드 교체
+  Store: 시계 정지 후 저장
+  메뉴의 명령 객체는 e4-e5, e6, e7, e2 다이어그램 참고
 end note
 
 @enduml

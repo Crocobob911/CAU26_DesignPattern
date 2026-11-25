@@ -101,6 +101,43 @@ public class StampTest {
         assertEquals(10, liveCount());
     }
 
+    @Test //Stamp 1회는 Undo 1회로 통째로 되돌려짐
+    public void stampIsUndoneInOneStep() {
+        facade.setAlive(30, 30, true);
+        new FixedStamp(facade, glider()).stamp(board, 10, 10);
+        assertEquals(6, liveCount());
+
+        new GridCommands(board).getUndo().execute();
+
+        assertEquals(1, liveCount());
+        assertTrue(board.isAlive(30, 30));
+    }
+
+    @Test //실행 중(저장 건너뛰기 상태)에 찍어도 그 상태가 유지되어 매 세대 기록이 쌓이지 않음
+    public void stampWhileRunningKeepsSavingOff() {
+        HistoryManager.setIgnoreSave(true);
+        new FixedStamp(facade, glider()).stamp(board, 10, 10);
+
+        assertTrue(HistoryManager.isIgnoringSave());
+        facade.tick();
+        assertFalse(HistoryManager.canUndo());
+    }
+
+    @Test //E7로 읽은 패턴(.cells/.rle)을 스탬프로 지정하면 클릭 좌표를 중심으로 찍힘
+    public void fileStampPlacesLoadedPattern() {
+        StampCommands commands = new StampCommands(new LifeMediator(facade, () -> { }));
+        TextToMementoAdapter loaded = new TextToMementoAdapter(List.of(
+                new Point(1, 0), new Point(2, 1), new Point(0, 2), new Point(1, 2), new Point(2, 2)), "glider", 3, 3);
+
+        commands.useFileStamp(loaded).execute();
+        commands.stampAct(board, 10, 10).execute();
+
+        assertEquals(StampCommands.FILE, commands.currStr());
+        assertEquals(Set.of(new Point(10, 9), new Point(11, 10), new Point(9, 11), new Point(10, 11),
+                new Point(11, 11)), livingCells());
+        assertThrows(IllegalArgumentException.class, () -> commands.useFileStamp(Neighborhood.emptyMemento()));
+    }
+
     private static Pattern glider() {
         return new Pattern(List.of(
                 new Point(1, 0),

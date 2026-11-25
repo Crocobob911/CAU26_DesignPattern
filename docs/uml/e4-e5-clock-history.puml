@@ -1,0 +1,147 @@
+@startuml
+title E4 실행 상태·속도 (State) + E5 Undo/Redo (Command + Memento)
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Swing UI" {
+  class UniversePanel {
+    ~installMenus()
+  }
+  class ClockPanel {
+    -runHalt : JButton
+    -speed : JSlider
+    -state : JLabel
+    -refresh()
+  }
+}
+
+package "명령 (Command)" {
+  interface Command {
+    +execute()
+  }
+  class ClockCommands {
+    +control() : ClockControl
+    +getTick() : Command
+    +getHalt() : Command
+    +createRun(delay : int) : Command
+    +changeSpeed(delay : int) : Command
+    +runAgonizing() : Command
+    +runSlow() : Command
+    +runMedium() : Command
+    +runFast() : Command
+  }
+  class GridCommands {
+    +getUndo() : Command
+    +getRedo() : Command
+    +getClear() : Command
+  }
+  class TickCommand
+  class RunCommand {
+    -delay : int
+  }
+  class HaltCommand
+  class UndoCommand
+  class RedoCommand
+  class ClearCommand
+}
+
+package "실행 상태 (State)" {
+  class ClockControl <<Context>> {
+    {static} +MIN_DELAY : int = 10
+    {static} +MAX_DELAY : int = 500
+    {static} +DEFAULT_DELAY : int = 150
+    -state : ClockState
+    -delay : int
+    +run(delay : int)
+    +halt()
+    +changeSpeed(delay : int)
+    +isRunning() : boolean
+    +stateLabel() : String
+    +delay() : int
+    +addListener(listener : Runnable)
+  }
+  interface ClockState <<State>> {
+    {static} HALTED : ClockState
+    {static} RUNNING : ClockState
+    +run(clock : ClockControl, delay : int)
+    +halt(clock : ClockControl)
+    +changeSpeed(clock : ClockControl, delay : int)
+    +isRunning() : boolean
+    +label() : String
+  }
+  class HaltedState <<ConcreteState>>
+  class RunningState <<ConcreteState>>
+  class Clock <<Singleton>> {
+    {static} +instance() : Clock
+    +startTicking(millisecondsBetweenTicks : int)
+    +stop()
+    +tick()
+  }
+}
+
+package "Undo 기록 (Memento)" {
+  class HistoryManager {
+    {static} +MAX_HISTORY : int = 100
+    {static} +saveState(model : UniverseModel)
+    {static} +setIgnoreSave(ignore : boolean)
+    {static} +isIgnoringSave() : boolean
+    {static} +clearHistory()
+    {static} +pushUndo(snapshot : UniverseSnapshot)
+    {static} +pushRedo(snapshot : UniverseSnapshot)
+    {static} +popUndo() : UniverseSnapshot
+    {static} +popRedo() : UniverseSnapshot
+  }
+  class UniverseSnapshot <<Memento>> {
+    -state : Storable
+    -generation : long
+  }
+  class UniverseModel {
+    ~createMemento() : Storable
+    ~restore(state : Storable, generation : long)
+    ~clear()
+  }
+}
+
+UniversePanel ..> ClockCommands : Go 메뉴
+UniversePanel ..> GridCommands : Grid 메뉴
+ClockPanel ..> ClockCommands : 버튼·슬라이더 → execute()
+ClockPanel ..> ClockControl : 상태 변경 알림 구독
+
+TickCommand ..|> Command
+RunCommand ..|> Command
+HaltCommand ..|> Command
+UndoCommand ..|> Command
+RedoCommand ..|> Command
+ClearCommand ..|> Command
+ClockCommands *-- ClockControl
+ClockCommands ..> RunCommand : 생성
+RunCommand --> ClockControl : run(delay)
+HaltCommand --> ClockControl : halt()
+TickCommand ..> Clock : tick()
+
+ClockControl --> ClockState : 현재 상태
+HaltedState ..|> ClockState
+RunningState ..|> ClockState
+ClockControl ..> Clock : startTicking / stop
+HaltedState ..> HistoryManager : Run 직전 1회 저장,\n저장 건너뛰기 On
+RunningState ..> HistoryManager : 저장 건너뛰기 Off
+
+GridCommands ..> UndoCommand : 생성
+GridCommands ..> RedoCommand : 생성
+GridCommands ..> ClearCommand : 생성
+UndoCommand ..> HistoryManager
+RedoCommand ..> HistoryManager
+UndoCommand --> UniverseModel : restore()
+RedoCommand --> UniverseModel : restore()
+ClearCommand --> UniverseModel : clear()
+HistoryManager o--> "0..100" UniverseSnapshot : undo / redo
+UniverseModel ..> HistoryManager : 편집·tick·clear 전에 saveState()
+
+note bottom of ClockControl
+  정지 --Run--> 실행 중 (Undo 1단계 저장)
+  실행 중 --Run/속도--> 실행 중 (속도만 변경)
+  실행 중 --Halt--> 정지
+  정지 --속도--> 정지 (속도만 기억)
+end note
+
+@enduml

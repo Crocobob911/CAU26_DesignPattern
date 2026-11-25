@@ -6,9 +6,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RleFormat extends TextFormat {
+    private static final java.util.regex.Pattern SIZE =
+            java.util.regex.Pattern.compile("x\\s*=\\s*(\\d+)\\s*,\\s*y\\s*=\\s*(\\d+)");
+
+    // Filled while reading one file, checked in validate().
+    private int declaredWidth = -1;
+    private int declaredHeight = -1;
+    private boolean terminated;
+    private char invalidTag;
 
     @Override
     protected String readHeader(BufferedReader reader) throws IOException {
+        declaredWidth = declaredHeight = -1;
+        terminated = false;
+        invalidTag = 0;
         reader.mark(4096);
         String line;
         String patternName = "Unknown RLE Pattern"; // 기본 이름
@@ -29,6 +40,11 @@ public class RleFormat extends TextFormat {
             }
             // x = ... 형태의 메타데이터 줄을 만나면 헤더가 끝난 것입니다.
             if (line.startsWith("x")) {
+                java.util.regex.Matcher size = SIZE.matcher(line);
+                if (size.find()) {
+                    declaredWidth = Integer.parseInt(size.group(1));
+                    declaredHeight = Integer.parseInt(size.group(2));
+                }
                 break;
             }
         }
@@ -75,13 +91,29 @@ public class RleFormat extends TextFormat {
                     y += run;
                     x = 0; 
                 } else if (c == '!') {
+                    terminated = true;
                     break;
+                } else if (!Character.isWhitespace(c) && invalidTag == 0) {
+                    invalidTag = c;
                 }
             }
         }
         
 
         return new ParsedData(liveCells, maxX + 1, maxY + 1);
+    }
+
+    /** Header → body → here: the body must end with '!', use only b/o/$ tags and fit the x/y size line. */
+    @Override
+    protected void validate(ParsedData data) throws IOException {
+        super.validate(data);
+        if (invalidTag != 0)
+            throw new IOException("RLE에서 쓸 수 없는 문자입니다: " + invalidTag);
+        if (!terminated)
+            throw new IOException("RLE 본문 끝에 '!'가 없습니다.");
+        if (declaredWidth >= 0 && !data.liveCells.isEmpty()
+                && (data.width > declaredWidth || data.height > declaredHeight))
+            throw new IOException("패턴이 헤더 크기(x = " + declaredWidth + ", y = " + declaredHeight + ")를 벗어납니다.");
     }
 
 

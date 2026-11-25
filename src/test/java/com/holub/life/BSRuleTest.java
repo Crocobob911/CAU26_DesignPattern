@@ -54,4 +54,19 @@ public class BSRuleTest {
             assertNull(BSRule.get(name));
         }
     }
+
+    @Test // 합의된 API: parse는 등록하지 않음, CONWAY 상수, all()은 등록 순서, 형식 오류는 IllegalArgumentException
+    public void testParseAllAndConwayConstant() {
+        BSRule parsed = BSRule.parse("B36/S23");
+        assertEquals("B36/S23", parsed.notation());
+        assertTrue(parsed.nextState(false, 6));
+        assertNull(BSRule.get("B36/S23"));
+
+        assertSame(BSRule.CONWAY, LifeRule.CONWAY);
+        assertSame(BSRule.CONWAY, BSRule.all().get(0));
+        assertTrue(BSRule.all().contains(BSRule.get("Day&Night")));
+
+        assertThrows(IllegalArgumentException.class, () -> BSRule.parse("B9/S23"));
+        assertThrows(IllegalArgumentException.class, () -> BSRule.parse("3/23"));
+    }
 }

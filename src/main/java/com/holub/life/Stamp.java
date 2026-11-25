@@ -28,6 +28,8 @@ public abstract class Stamp {
 	}
 	
 	private void changeMultipleCell(UniverseModel board, int _x, int _y) {
+		// While the clock runs, saving is already off for the whole run; keep it that way after stamping.
+		boolean wasIgnoringSave = HistoryManager.isIgnoringSave();
 		HistoryManager.saveState(board);
 		HistoryManager.setIgnoreSave(true);
 		
@@ -48,7 +50,7 @@ public abstract class Stamp {
 			}
 		}
 		finally {
-		HistoryManager.setIgnoreSave(false);
+		HistoryManager.setIgnoreSave(wasIgnoringSave);
 		}
 	}
 }

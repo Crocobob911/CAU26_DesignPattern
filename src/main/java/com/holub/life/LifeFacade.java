@@ -97,6 +97,13 @@ public final class LifeFacade {
     public void load(InputStream input) throws IOException {
         Storable state = Neighborhood.emptyMemento();
         state.load(input);
+        load(state);
+    }
+
+    /** Replace the board with a loaded state (.life, .cells or .rle). Generation restarts at 0. */
+    public void load(Storable state) {
+        if (!(state instanceof Cell.Memento))
+            throw new IllegalArgumentException("Not a board state: " + state);
         model.restore(state, 0, Change.LOAD);
     }
 

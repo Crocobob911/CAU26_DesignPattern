@@ -313,18 +313,38 @@ public final class Neighborhood implements Cell
 
 	public void setRule(LifeRule rule)
 	{
-		for (Cell[] row : grid)
-			for (Cell cell : row)
-				cell.setRule(rule);
+		for (Cell cell : cells())
+			cell.setRule(rule);
 	}
 
 	void activateAll()
 	{
 		amActive = true;
-		for (Cell[] row : grid)
-			for (Cell cell : row)
-				if (cell instanceof Neighborhood neighborhood)
-					neighborhood.activateAll();
+		for (Cell cell : cells())
+			if (cell instanceof Neighborhood neighborhood)
+				neighborhood.activateAll();
+	}
+
+	/** Iterator over the sub-cells, row by row. Used where a cell's row and column do not matter;
+	 *  figureNextState(), transition(), transfer() and accept() keep their row/column loops because
+	 *  they need the position for edges, activeEdges and coordinates.
+	 */
+	private Iterable<Cell> cells()
+	{	return () -> new Iterator<Cell>()
+		{	private int next = 0;
+
+			public boolean hasNext()
+			{	return next < gridSize * gridSize;
+			}
+
+			public Cell next()
+			{	if (!hasNext())
+					throw new NoSuchElementException();
+				Cell cell = grid[next / gridSize][next % gridSize];
+				next++;
+				return cell;
+			}
+		};
 	}
 
 	public boolean isAlive()
@@ -338,9 +358,8 @@ public final class Neighborhood implements Cell
 	public void clear()
 	{	activeEdges.clear();
 
-		for( int row = 0; row < gridSize; ++row )
-			for( int column = 0; column < gridSize; ++column )
-				grid[row][column].clear();
+		for( Cell cell : cells() )
+			cell.clear();
 
 		amActive = false;
 	}

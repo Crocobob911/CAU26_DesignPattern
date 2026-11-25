@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class LifeArchitectureTest {
     @Test
@@ -59,6 +60,43 @@ class LifeArchitectureTest {
         assertFalse(board.isAlive(8, 7));
         board.tick();
         assertFalse(board.isAlive(7, 7));
+    }
+
+    @Test
+    void loadThroughMediatorPausesClockAndStartsNewHistory() throws Exception {
+        HistoryManager.clearHistory();
+        HistoryManager.setIgnoreSave(false);
+        LifeFacade board = new UniverseBuilder().build();
+        var pauses = new AtomicInteger();
+        var mediator = new LifeMediator(board, pauses::incrementAndGet);
+        var events = new ArrayList<LifeFacade.Change>();
+        board.addListener(event -> events.add(event.change()));
+        board.setAlive(1, 1, true);
+        board.tick();
+        assertTrue(HistoryManager.canUndo());
+
+        Cell.Memento loaded = Neighborhood.emptyMemento();
+        loaded.markAsAlive(new Point(5, 5));
+        mediator.load(loaded);
+
+        assertEquals(1, pauses.get());
+        assertFalse(HistoryManager.canUndo());
+        assertEquals(0, board.generation());
+        assertTrue(board.isAlive(5, 5));
+        assertEquals(LifeFacade.Change.LOAD, events.get(events.size() - 1));
+    }
+
+    @Test
+    void storeThroughMediatorPausesClockFirst(@TempDir java.nio.file.Path dir) throws Exception {
+        LifeFacade board = new UniverseBuilder().build();
+        board.setAlive(3, 4, true);
+        var pauses = new AtomicInteger();
+        var file = dir.resolve("board.cells").toFile();
+
+        new LifeMediator(board, pauses::incrementAndGet).store(FileFormat.forFileName(file.getName()), file);
+
+        assertEquals(1, pauses.get());
+        assertTrue(((Cell.Memento) new PlaintextFormat().load(file)).isAlive(new Point(3, 4)));
     }
 
     @Test

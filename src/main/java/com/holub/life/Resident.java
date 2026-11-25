@@ -88,15 +88,10 @@ public final class Resident implements Cell
 		return true;
 	}
 	
-	// 동적 생성 rule에 의해 setRule이 하나 더 추가됨.
 	// null이 입력될 수 있음에 따라서, 기존 setRule에 null 여부 확인을 추가. null이 아닐때만 변경.
 	public void setRule(LifeRule rule)
 	{	
 		if(rule != null) this.rule = rule;
-	}
-	
-	public void setRule(String _name) {
-			setRule(Rule.getRule(_name));
 	}
 
 	public void	   clear()			{amAlive = willBeAlive = false; }

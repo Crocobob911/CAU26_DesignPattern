@@ -1,0 +1,70 @@
+@startuml
+title E3 통계 + 주기 감지 — Observer
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Swing UI" {
+  class Life
+  class StatsPanel {
+    -generation : JLabel
+    -alive : JLabel
+    -status : JLabel
+    -refresh()
+    {static} ~statusText(cycle : int) : String
+  }
+}
+
+package "통계 모델 (Observer)" {
+  class BoardStatistic <<Observer>> {
+    -generation : long
+    -aliveCount : int
+    +getGeneration() : long
+    +getAlive() : int
+    ~update(event : Event)
+  }
+  class BoardCycleDetector <<Observer>> {
+    -boardHash : Map<Integer, BitSet>
+    -cycle : int
+    -MaxLen : int
+    +getCycle() : int
+    +setMaxLen(val : int) : boolean
+    +update(event : Event)
+    +reInitialize()
+  }
+}
+
+package "게임 제어" {
+  class LifeMediator <<Mediator>> {
+    +facade() : LifeFacade
+  }
+  class LifeFacade <<Subject>> {
+    +addListener(listener : Consumer<Event>)
+    +visitCells(visitor : CellVisitor)
+    +generation() : long
+  }
+}
+
+Life ..> StatsPanel : 생성, 프레임 SOUTH
+Life ..> BoardStatistic : 생성
+Life ..> BoardCycleDetector : 생성
+StatsPanel --> BoardStatistic : 값 읽기만
+StatsPanel --> BoardCycleDetector : 값 읽기만
+StatsPanel ..> LifeFacade : 알림 구독\n(SwingUtilities.invokeLater)
+BoardStatistic ..> LifeMediator : facade()
+BoardCycleDetector ..> LifeMediator : facade()
+BoardStatistic ..> LifeFacade : 알림 구독, visitCells
+BoardCycleDetector ..> LifeFacade : 알림 구독, visitCells
+
+note right of BoardCycleDetector
+  TICK: 보드를 BitSet으로 기록하고 이전 기록과 비교
+  그 밖의 이벤트(EDIT, CLEAR, LOAD, RESTORE,
+  RULE, RESIZE): reInitialize()로 기록 초기화
+  getCycle(): -1 = 변화 중, 1 = 정지, N = 주기 N
+end note
+
+note bottom of StatsPanel
+  계산·판정은 하지 않고 표시만 한다.
+  모델 클래스는 Swing에 의존하지 않는다.
+end note
+
+@enduml

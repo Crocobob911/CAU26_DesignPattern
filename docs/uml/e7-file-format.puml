@@ -1,0 +1,103 @@
+@startuml
+title E7 RLE / Plaintext(.cells) / .life 불러오기·저장 — Strategy + Template Method + Adapter
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "파일 명령 (Command)" {
+  interface Command {
+    +execute()
+  }
+  class FileCommands {
+    +getSave() : Command
+    +getLoad() : Command
+  }
+  class LoadCommand
+  class SaveCommand
+}
+
+class LifeMediator <<Mediator>> {
+  +load(state : Storable)
+  +store(format : FileFormat, file : File)
+}
+
+package "파일 형식" {
+  interface FileFormat <<Strategy>> {
+    +load(file : File) : Storable
+    +save(file : File, model : UniverseModel)
+    {static} +forFileName(fileName : String) : FileFormat
+  }
+  class LifeFormat
+  abstract class TextFormat <<Template Method>> {
+    +load(file : File) : Storable
+    +save(file : File, model : UniverseModel)
+    {abstract} #readHeader(reader : BufferedReader) : String
+    {abstract} #readBody(reader : BufferedReader) : ParsedData
+    #validate(data : ParsedData)
+    {abstract} #writeHeader(writer : BufferedWriter)
+    {abstract} #writeBody(writer : BufferedWriter, memento : Memento, w : int, h : int)
+  }
+  class "TextFormat.ParsedData" as ParsedData {
+    +liveCells : List<Point>
+    +width : int
+    +height : int
+  }
+  class PlaintextFormat
+  class RleFormat {
+    -declaredWidth : int
+    -declaredHeight : int
+    -terminated : boolean
+    #validate(data : ParsedData)
+  }
+}
+
+package "Memento 연결 (Adapter)" {
+  interface Storable {
+    +load(in : InputStream)
+    +flush(out : OutputStream)
+  }
+  interface "Cell.Memento" as Memento {
+    +markAsAlive(location : Point)
+    +isAlive(location : Point) : boolean
+  }
+  interface PatternInfo {
+    +getName() : String
+    +getWidth() : int
+    +getHeight() : int
+  }
+  class TextToMementoAdapter <<Adapter>> {
+    +pointList() : List<Point>
+  }
+}
+
+LoadCommand ..|> Command
+SaveCommand ..|> Command
+FileCommands ..> LoadCommand : 생성
+FileCommands ..> SaveCommand : 생성
+LoadCommand ..> FileFormat : forFileName().load()
+LoadCommand --> LifeMediator : load(state)
+SaveCommand --> LifeMediator : store(format, file)
+LifeMediator ..> FileFormat : save()
+
+LifeFormat ..|> FileFormat
+TextFormat ..|> FileFormat
+PlaintextFormat --|> TextFormat
+RleFormat --|> TextFormat
+TextFormat ..> ParsedData
+TextFormat ..> TextToMementoAdapter : 생성
+Memento --|> Storable
+TextToMementoAdapter ..|> Memento
+TextToMementoAdapter ..|> PatternInfo
+
+note bottom of TextFormat
+  load() = 헤더 → 본문 → 검증 → Adapter 생성
+  RLE 검증: '!' 종료 표시, b/o/$ 외 문자 금지,
+  헤더 x, y 크기를 넘지 않을 것
+end note
+
+note right of LifeMediator
+  Load: 시계 정지 → Undo 기록 비우기 → 보드 교체
+  (LOAD 이벤트로 다시 그리기·통계·셀 나이 초기화)
+  Store: 시계 정지 후 저장
+end note
+
+@enduml
