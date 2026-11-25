@@ -1,5 +1,11 @@
 package com.holub.life;
 
+import java.io.File;
+
+import javax.swing.JOptionPane;
+
+import com.holub.io.Files;
+
 public class StampCommands {
 	private SetStampCommand defStamp;
 	private SetStampCommand glider;
@@ -8,8 +14,9 @@ public class StampCommands {
 	private SetStampCommand blink;
 	private SetStampCommand LWSS;
 	private String currName;
-	
-	StampCommands(LifeMediator mediator){
+	private final LifeMediator mediator;
+	StampCommands(LifeMediator _mediator){
+		mediator = _mediator;
 		Stamp init = new StampDefault(mediator); 
 		Stamp.setCurr(init);
 		currName = "default";
@@ -19,6 +26,13 @@ public class StampCommands {
 		block = new SetStampCommand(new StampBlock(mediator));
 		blink = new SetStampCommand(new StampBlink(mediator));
 		LWSS = new SetStampCommand(new StampLWSS(mediator));
+	}
+	public void fileStampDone() {
+		currName = "File";
+	}
+	
+	public SetStampFileCommand setFileStamp() {
+		return new SetStampFileCommand(mediator);
 	}
 	
 	public SetStampCommand setStamp(String stampName) {

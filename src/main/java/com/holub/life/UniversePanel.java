@@ -106,7 +106,13 @@ final class UniversePanel extends JPanel {
         		refreshViewMenuLabels();
         	});
         } //STAMP Menus
-        
+        MenuSite.addLine(this, "Stamp", "Load file", event ->{
+        	SetStampFileCommand sFS = stampCommands.setFileStamp();
+    		sFS.execute();
+    		if(sFS.isSuccessed()) stampCommands.fileStampDone();
+    		
+    		refreshViewMenuLabels();
+    	});
         while(ruleIter.hasNext()) {
         	String item = ruleIter.next();
         	MenuSite.addLine(this, "Rule", item, event -> {
@@ -151,8 +157,10 @@ final class UniversePanel extends JPanel {
     		String curr = ruleIter.next(); 
     		setMenuText("Rule", curr, choiceLabel(curr, BSRule.get(curr) == facade.model().rule()));
     	}
+    	
     	for (String stamp : STAMPS)
     		setMenuText("Stamp", stamp, choiceLabel(stamp, stamp == stampCommands.currStr()));
+    	setMenuText("Stamp", "Load file", choiceLabel("Load file", stampCommands.currStr() == "File"));
     	
         for (BoardTheme each : THEMES)
             setMenuText("View:Theme", each.name(), choiceLabel(each.name(), each == theme));
