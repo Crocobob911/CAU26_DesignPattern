@@ -1,5 +1,6 @@
 package com.holub.life;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,9 +32,27 @@ public final class LifeMediator {
         facade.clear();
     }
 
-    public void load(InputStream input) throws IOException {
+    /**
+     * A loaded board starts over: the clock halts, the Undo history is emptied, then the board is replaced.
+     * The LOAD event that follows makes the view redraw and the statistics and cell ages restart.
+     */
+    public void load(Storable state) {
+        Objects.requireNonNull(state);
         pauseClock.run();
-        facade.load(input);
+        HistoryManager.clearHistory();
+        facade.load(state);
+    }
+
+    public void load(InputStream input) throws IOException {
+        Storable state = Neighborhood.emptyMemento();
+        state.load(input);
+        load(state);
+    }
+
+    /** The clock halts first so the file holds a single generation, as the original doStore did. */
+    public void store(FileFormat format, File file) throws Exception {
+        pauseClock.run();
+        format.save(file, facade.model());
     }
 
     public void store(OutputStream output) throws IOException {

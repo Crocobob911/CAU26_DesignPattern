@@ -1,0 +1,90 @@
+@startuml
+title E2 생존 규칙 선택 — Strategy (BSRule) + Command
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Swing UI" {
+  class UniversePanel {
+    ~installMenus()
+    -addRules()
+    -refreshViewMenuLabels()
+  }
+}
+
+package "규칙 명령 (Command)" {
+  interface Command {
+    +execute()
+  }
+  class RuleCommands {
+    -commandRegistry : Map<String, Command>
+    +putRegistry(ruleName : String)
+    +setRule(ruleName : String) : Command
+    +addRule(ruleName : String, ruleDesc : String) : Command
+  }
+  class SetRuleCommand {
+    -ruleName : String
+    +execute()
+  }
+  class AddRuleCommand {
+    -ruleName : String
+    -ruleDesc : String
+    +execute()
+  }
+}
+
+package "규칙 (Strategy)" {
+  interface LifeRule <<Strategy>> {
+    {static} +CONWAY : LifeRule
+    +nextState(alive : boolean, neighbors : int) : boolean
+  }
+  class BSRule <<ConcreteStrategy>> {
+    {static} -REGISTRY : Map<String, BSRule>
+    {static} +CONWAY : BSRule
+    {static} +HIGH_LIFE : BSRule
+    {static} +SEEDS : BSRule
+    {static} +DAY_AND_NIGHT : BSRule
+    -name : String
+    -notation : String
+    -birth : boolean[9]
+    -survive : boolean[9]
+    {static} +parse(notation : String) : BSRule
+    {static} +register(name : String, notation : String) : BSRule
+    {static} +get(name : String) : BSRule
+    {static} +all() : List<BSRule>
+    +name() : String
+    +notation() : String
+    +nextState(alive : boolean, neighbors : int) : boolean
+  }
+}
+
+package "보드 모델" {
+  class UniverseModel {
+    ~setRule(rule : LifeRule)
+    ~rule() : LifeRule
+  }
+  class Resident {
+    +setRule(rule : LifeRule)
+  }
+}
+
+UniversePanel ..> RuleCommands : Rule 메뉴 → execute()
+UniversePanel ..> BSRule : all()로 메뉴 구성
+RuleCommands ..> SetRuleCommand : 생성
+RuleCommands ..> AddRuleCommand : 생성
+SetRuleCommand ..|> Command
+AddRuleCommand ..|> Command
+SetRuleCommand --> UniverseModel : setRule(BSRule.get(name))
+AddRuleCommand ..> BSRule : register()
+BSRule ..|> LifeRule
+LifeRule ..> BSRule : CONWAY = BSRule.CONWAY
+UniverseModel --> LifeRule : 현재 규칙
+Resident --> LifeRule : nextState()
+
+note right of BSRule
+  REGISTRY 선언이 상수보다 위에 있어야 한다
+  (static 필드는 위에서부터 초기화).
+  잘못된 표기는 IllegalArgumentException →
+  UniversePanel.addRules()가 메시지로 보여 준다.
+end note
+
+@enduml

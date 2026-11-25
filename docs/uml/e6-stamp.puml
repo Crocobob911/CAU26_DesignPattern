@@ -1,0 +1,96 @@
+@startuml
+title E6 패턴 스탬프 — Factory Method + Template Method + Command
+skinparam classAttributeIconSize 0
+hide empty members
+
+package "Swing UI" {
+  class UniversePanel {
+    {static} ~STAMPS : List<String>
+    ~installMenus()
+  }
+}
+
+package "스탬프 명령 (Command)" {
+  interface Command {
+    +execute()
+  }
+  class StampCommands {
+    {static} ~FILE : String
+    +setStamp(stampName : String) : SetStampCommand
+    +currStr() : String
+    +stampAct(model : UniverseModel, x : int, y : int) : StampingCommand
+    +loadFileStamp() : Command
+    ~useFileStamp(loaded : Storable) : SetStampCommand
+  }
+  class SetStampCommand {
+    -targetStamp : Stamp
+  }
+  class StampingCommand {
+    -stamp : Stamp
+    -x : int
+    -y : int
+  }
+}
+
+package "스탬프 (Factory Method + Template Method)" {
+  abstract class Stamp <<Creator>> {
+    {static} -current : Stamp
+    #facade : LifeFacade
+    {abstract} +createPattern() : Pattern
+    +stamp(board : UniverseModel, x : int, y : int)
+    {static} +setCurr(target : Stamp)
+    {static} +getCurr() : Stamp
+    -changeMultipleCell(board : UniverseModel, x : int, y : int)
+  }
+  class StampDefault
+  class StampGlider
+  class StampToad
+  class StampBlock
+  class StampBlink
+  class StampLWSS
+  class StampFile {
+    -loadedFile : TextToMementoAdapter
+  }
+  class Pattern <<Product>> {
+    -pattern : List<Point>
+    +getIterator() : Iterator<Point>
+    +width() : int
+    +height() : int
+  }
+}
+
+class TextToMementoAdapter {
+  +pointList() : List<Point>
+}
+class HistoryManager
+class LifeMediator <<Mediator>>
+
+UniversePanel ..> StampCommands : Stamp 메뉴, 마우스 클릭
+SetStampCommand ..|> Command
+StampingCommand ..|> Command
+StampCommands ..> SetStampCommand : 생성
+StampCommands ..> StampingCommand : 생성
+StampCommands ..> StampFile : 파일 패턴으로 생성
+SetStampCommand --> Stamp : setCurr()
+StampingCommand --> Stamp : stamp(board, x, y)
+
+StampDefault --|> Stamp
+StampGlider --|> Stamp
+StampToad --|> Stamp
+StampBlock --|> Stamp
+StampBlink --|> Stamp
+StampLWSS --|> Stamp
+StampFile --|> Stamp
+Stamp ..> Pattern : createPattern()
+StampFile --> TextToMementoAdapter : E7로 읽은 패턴
+StampDefault ..> LifeMediator : toggle(x, y)
+Stamp ..> HistoryManager : 찍기 1회 = Undo 1단계
+
+note right of Stamp
+  stamp() = 템플릿 메서드:
+  1. createPattern() (하위 클래스가 결정)
+  2. 클릭 좌표를 중심으로 셀을 켠다 (보드 밖은 잘라냄)
+  실행 중이면 저장 건너뛰기 상태를 그대로 유지한다.
+end note
+
+@enduml

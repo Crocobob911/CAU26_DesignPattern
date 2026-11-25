@@ -1,12 +1,15 @@
 package com.holub.life;
 
+import com.holub.io.Files;
 import java.io.File;
-
+import java.io.FileNotFoundException;
 import javax.swing.JOptionPane;
 
-import com.holub.io.Files;
-
 public class StampCommands {
+	/** Name shown in the Stamp menu while a pattern loaded from a file is the current stamp. */
+	static final String FILE = "From File...";
+
+	private final LifeMediator mediator;
 	private SetStampCommand defStamp;
 	private SetStampCommand glider;
 	private SetStampCommand toad;
@@ -14,9 +17,9 @@ public class StampCommands {
 	private SetStampCommand blink;
 	private SetStampCommand LWSS;
 	private String currName;
-	private final LifeMediator mediator;
-	StampCommands(LifeMediator _mediator){
-		mediator = _mediator;
+	
+	StampCommands(LifeMediator mediator){
+		this.mediator = mediator;
 		Stamp init = new StampDefault(mediator); 
 		Stamp.setCurr(init);
 		currName = "default";
@@ -26,13 +29,6 @@ public class StampCommands {
 		block = new SetStampCommand(new StampBlock(mediator));
 		blink = new SetStampCommand(new StampBlink(mediator));
 		LWSS = new SetStampCommand(new StampLWSS(mediator));
-	}
-	public void fileStampDone() {
-		currName = "File";
-	}
-	
-	public SetStampFileCommand setFileStamp() {
-		return new SetStampFileCommand(mediator);
 	}
 	
 	public SetStampCommand setStamp(String stampName) {
@@ -52,6 +48,31 @@ public class StampCommands {
 	
 	public StampingCommand stampAct(UniverseModel model, int x, int y) {
 		return new StampingCommand(model, Stamp.getCurr(), x, y);
+	}
+
+	/** Stamp > From File...: a .cells or .rle pattern read by the E7 formats becomes the stamp. */
+	public Command loadFileStamp() {
+		return () -> {
+			File file;
+			try {
+				file = Files.userSelected(".", null, "Pattern Files (.cells, .rle)", "Use as Stamp");
+			} catch (FileNotFoundException cancelled) {
+				return;
+			}
+			try {
+				useFileStamp(FileFormat.forFileName(file.getName()).load(file)).execute();
+			} catch (Exception e) {
+				JOptionPane.showMessageDialog(null, "Stamp Load Failed: " + e.getMessage(), "Error",
+						JOptionPane.ERROR_MESSAGE);
+			}
+		};
+	}
+
+	SetStampCommand useFileStamp(Storable loaded) {
+		if (!(loaded instanceof TextToMementoAdapter pattern))
+			throw new IllegalArgumentException("스탬프로 쓸 수 있는 파일은 .cells, .rle 입니다.");
+		currName = FILE;
+		return new SetStampCommand(new StampFile(mediator, pattern));
 	}
 	
 	

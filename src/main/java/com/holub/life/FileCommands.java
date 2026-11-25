@@ -4,9 +4,9 @@ public class FileCommands {
     private final Command saveCommand;
     private final Command loadCommand;
 
-    public FileCommands(UniverseModel model) {
-        this.saveCommand = new SaveCommand(model);
-        this.loadCommand = new LoadCommand(model);
+    public FileCommands(LifeMediator mediator) {
+        this.saveCommand = new SaveCommand(mediator);
+        this.loadCommand = new LoadCommand(mediator);
     }
 
     public Command getSave() { return saveCommand; }

@@ -2,7 +2,6 @@ package com.holub.life;
 //
 import java.util.Map;
 import java.util.LinkedHashMap;
-import java.util.Iterator;
 
 public class RuleCommands {
 	
@@ -13,15 +12,8 @@ public class RuleCommands {
 		model = _model;
 		commandRegistry = new LinkedHashMap<String,Command>();
 		
-		Iterator<String> ruleKeys = BSRule.getKeys();
-		while(ruleKeys.hasNext()) {
-			String item = ruleKeys.next();
-			putRegistry(item);
-		}
-//		commandRegistry.put("CONWAY", new SetRuleCommand(model, "CONWAY"));
-//		commandRegistry.put("HighLife", new SetRuleCommand(model,"HighLife"));
-//		commandRegistry.put("Seeds", new SetRuleCommand(model, "Seeds"));
-//		commandRegistry.put("DayAndNight", new SetRuleCommand(model, "Day&Night"));
+		for (BSRule rule : BSRule.all())
+			putRegistry(rule.name());
 	}
 	
 	public void putRegistry(String ruleName) {

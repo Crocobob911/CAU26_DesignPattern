@@ -10,7 +10,6 @@ import java.awt.event.MouseEvent;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Objects;
-import java.util.Iterator;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 import javax.swing.JLabel;
@@ -42,7 +41,7 @@ final class UniversePanel extends JPanel {
     private final CellAgeTracker cellAges;
 
     UniversePanel(LifeMediator mediator) {
-        this(mediator, new FileCommands(mediator.facade().model()),
+        this(mediator, new FileCommands(mediator),
                 new ClockCommands(mediator.facade().model()), new GridCommands(mediator.facade().model()),
                 		new StampCommands(mediator), new RuleCommands(mediator.facade().model()));
     }
@@ -85,8 +84,7 @@ final class UniversePanel extends JPanel {
     }
 
     void installMenus() {
-    	Iterator<String> ruleIter = BSRule.getKeys();
-        MenuSite.addLine(this, "Grid", "Clear", event -> mediator.clear());
+        MenuSite.addLine(this, "Grid", "Clear", event -> gridCommands.getClear().execute());
         MenuSite.addLine(this, "Grid", "Load", event -> fileCommands.getLoad().execute());
         MenuSite.addLine(this, "Grid", "Store", event -> fileCommands.getSave().execute());
         MenuSite.addLine(this, "Grid", "Size...", event -> chooseSize());
@@ -106,15 +104,13 @@ final class UniversePanel extends JPanel {
         		refreshViewMenuLabels();
         	});
         } //STAMP Menus
-        MenuSite.addLine(this, "Stamp", "Load file", event ->{
-        	SetStampFileCommand sFS = stampCommands.setFileStamp();
-    		sFS.execute();
-    		if(sFS.isSuccessed()) stampCommands.fileStampDone();
-    		
-    		refreshViewMenuLabels();
-    	});
-        while(ruleIter.hasNext()) {
-        	String item = ruleIter.next();
+        MenuSite.addLine(this, "Stamp", StampCommands.FILE, event -> {
+        	stampCommands.loadFileStamp().execute();
+        	refreshViewMenuLabels();
+        });
+        
+        for (BSRule rule : BSRule.all()) {
+        	String item = rule.name();
         	MenuSite.addLine(this, "Rule", item, event -> {
         		ruleCommands.setRule(item).execute();
         		refreshViewMenuLabels();
@@ -152,15 +148,12 @@ final class UniversePanel extends JPanel {
 
     /** Shows the current choice in the menu text, e.g. "• Dark" and "Grid Lines: On". */
     private void refreshViewMenuLabels() {
-    	Iterator<String> ruleIter = BSRule.getKeys();
-    	while(ruleIter.hasNext()) {
-    		String curr = ruleIter.next(); 
-    		setMenuText("Rule", curr, choiceLabel(curr, BSRule.get(curr) == facade.model().rule()));
-    	}
-    	
+    	for (BSRule rule : BSRule.all())
+    		setMenuText("Rule", rule.name(), choiceLabel(rule.name(), rule == facade.model().rule()));
     	for (String stamp : STAMPS)
-    		setMenuText("Stamp", stamp, choiceLabel(stamp, stamp == stampCommands.currStr()));
-    	setMenuText("Stamp", "Load file", choiceLabel("Load file", stampCommands.currStr() == "File"));
+    		setMenuText("Stamp", stamp, choiceLabel(stamp, stamp.equals(stampCommands.currStr())));
+    	setMenuText("Stamp", StampCommands.FILE,
+    			choiceLabel(StampCommands.FILE, StampCommands.FILE.equals(stampCommands.currStr())));
     	
         for (BoardTheme each : THEMES)
             setMenuText("View:Theme", each.name(), choiceLabel(each.name(), each == theme));

@@ -1,6 +1,7 @@
 package com.holub.life;
 
 import com.holub.ui.MenuSite;
+import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GraphicsEnvironment;
 import javax.swing.JFrame;
@@ -19,15 +20,18 @@ public final class Life extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         UniverseModel model = new UniverseBuilder().buildModel(LifeRule.CONWAY);
-        LifeMediator mediator = new LifeMediator(new LifeFacade(model), () -> Clock.instance().stop());
-        FileCommands fileCommands = new FileCommands(model);
         ClockCommands clockCommands = new ClockCommands(model);
+        // The Mediator pauses through the Halt command so the E4 state and the Undo bypass stay in step.
+        LifeMediator mediator = new LifeMediator(new LifeFacade(model), () -> clockCommands.getHalt().execute());
+        FileCommands fileCommands = new FileCommands(mediator);
         GridCommands gridCommands = new GridCommands(model);
         RuleCommands ruleCommands = new RuleCommands(model);
         StampCommands stampCommands = new StampCommands(mediator);
         UniversePanel panel = new UniversePanel(mediator, fileCommands, clockCommands, gridCommands, stampCommands, ruleCommands);
         panel.installMenus();
         Clock.instance().addClockListener(mediator::tick);
+        StatsPanel stats = new StatsPanel(mediator.facade(),
+                new BoardStatistic(mediator), new BoardCycleDetector(mediator));
 
         JScrollPane scroll = new JScrollPane(panel);
         scroll.setBorder(null);
@@ -35,7 +39,9 @@ public final class Life extends JFrame {
         var screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
         scroll.setPreferredSize(new Dimension(Math.min(board.width, screen.width - 48),
                 Math.min(board.height, screen.height - 96)));
-        add(scroll);
+        add(new ClockPanel(clockCommands), BorderLayout.NORTH);
+        add(scroll, BorderLayout.CENTER);
+        add(stats, BorderLayout.SOUTH);
         pack();
         setVisible(true);
     }
