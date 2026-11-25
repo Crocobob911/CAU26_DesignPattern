@@ -22,6 +22,7 @@ public abstract class TextFormat implements FileFormat {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String name = readHeader(reader);
             ParsedData data = readBody(reader);
+            validate(data);
             return new TextToMementoAdapter(data.liveCells, name, data.width, data.height);
         }
     }
@@ -37,6 +38,13 @@ public abstract class TextFormat implements FileFormat {
 
     protected abstract String readHeader(BufferedReader reader) throws IOException;
     protected abstract ParsedData readBody(BufferedReader reader) throws IOException;
+
+    /** Template step 3, after header and body: reject data that cannot be a pattern. Formats may add checks. */
+    protected void validate(ParsedData data) throws IOException {
+        for (Point cell : data.liveCells)
+            if (cell.x < 0 || cell.y < 0 || cell.x >= data.width || cell.y >= data.height)
+                throw new IOException("패턴 크기 밖의 셀이 있습니다: (" + cell.x + ", " + cell.y + ")");
+    }
     
     protected abstract void writeHeader(BufferedWriter writer) throws IOException;
     protected abstract void writeBody(BufferedWriter writer, Cell.Memento memento, int w, int h) throws IOException;

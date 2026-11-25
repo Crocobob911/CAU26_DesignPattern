@@ -1,5 +1,6 @@
 package com.holub.life;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -74,5 +75,45 @@ public class ClockCommandsTest {
         HistoryManager.clearHistory();
         HistoryManager.saveState(dummyModel);
         assertTrue(HistoryManager.canUndo(), "Halt 이후에는 다시 상태 저장이 활성화되어야 합니다.");
+    }
+
+    @Test // E4 State: 정지 → Run → (실행 중 Run은 속도만 변경) → Halt → 정지
+    public void testRunAndHaltSwitchClockState() {
+        ClockControl clock = clockRegistry.control();
+        assertFalse(clock.isRunning());
+
+        clockRegistry.createRun(100).execute();
+        assertTrue(clock.isRunning());
+        assertEquals(100, clock.delay());
+
+        clockRegistry.runFast().execute();
+        assertTrue(clock.isRunning());
+        assertEquals(30, clock.delay());
+        HistoryManager.popUndo();
+        assertFalse(HistoryManager.canUndo(), "실행 중 Run은 Undo 기록을 새로 남기지 않아야 합니다.");
+
+        clockRegistry.getHalt().execute();
+        assertFalse(clock.isRunning());
+        assertFalse(HistoryManager.isIgnoringSave());
+    }
+
+    @Test // E4 속도 슬라이더: 정지 중에는 속도만 기억하고 시작하지 않음, 다음 Run이 그 속도를 씀
+    public void testSpeedChangeWhileHaltedOnlyRemembersDelay() {
+        ClockControl clock = clockRegistry.control();
+        clockRegistry.changeSpeed(70).execute();
+
+        assertFalse(clock.isRunning());
+        assertEquals(70, clock.delay());
+        assertFalse(HistoryManager.canUndo());
+
+        clockRegistry.createRun(clock.delay()).execute();
+        clockRegistry.changeSpeed(250).execute();
+        assertTrue(clock.isRunning());
+        assertEquals(250, clock.delay());
+    }
+
+    @AfterEach
+    public void tearDown() {
+        Clock.instance().stop();
     }
 }

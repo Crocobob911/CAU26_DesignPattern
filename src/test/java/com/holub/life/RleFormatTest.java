@@ -47,6 +47,19 @@ public class RleFormatTest {
         assertTrue(adapter.isAlive(new Point(2, 2)));
     }
 
+    @Test // Template Method 3단계(검증): '!' 누락, 허용되지 않는 문자, 헤더 크기 초과는 불러오지 않음
+    public void testLoadRejectsInvalidRle() throws Exception {
+        String[] invalidBodies = {"bo$2bo$3o\n", "bo$2bo$3z!\n", "bo$2bo$5o!\n"};
+        for (String body : invalidBodies) {
+            File file = tempDir.resolve("bad.rle").toFile();
+            try (FileWriter writer = new FileWriter(file)) {
+                writer.write("x = 3, y = 3, rule = B3/S23\n");
+                writer.write(body);
+            }
+            assertThrows(java.io.IOException.class, () -> new RleFormat().load(file), body);
+        }
+    }
+
     @Test
     public void testSaveRleFormat() throws Exception {
         Neighborhood board = new Neighborhood(8, new Neighborhood(8, new Resident()));

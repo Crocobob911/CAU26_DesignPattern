@@ -1,39 +1,40 @@
 package com.holub.life;
 import java.io.File;
+import java.io.FileNotFoundException;
 import javax.swing.JOptionPane;
 import com.holub.io.Files;
 
 public class LoadCommand implements Command {
-    private final UniverseModel model;
+    private final LifeMediator mediator;
 
-    public LoadCommand(UniverseModel model) {
-        this.model = model;
+    public LoadCommand(LifeMediator mediator) {
+        this.mediator = mediator;
     }
 
+    /** Only reads the file; stopping the clock and resetting Undo is the Mediator's job. */
     @Override
     public void execute() {
+        File file;
         try {
+            file = Files.userSelected(".", null, "Life Game Files (.life, .cells, .rle)", "Load");
+        } catch (FileNotFoundException cancelled) {
+            return;
+        }
 
-            File file = Files.userSelected(".", "", "All Files", "Load");
-            if (file == null) return;
+        File file = Files.userSelected(".", "", "All Files", "Load");
+        if (file == null) return;
 
-            FileFormat strategy = getStrategy(file.getName());
-            Storable memento = strategy.load(file);
+        FileFormat strategy = getStrategy(file.getName());
+        Clock.instance().stop();
+        HistoryManager.setIgnoreSave(false);
+        HistoryManager.clearHistory();
+        model.restore(memento, 0, LifeFacade.Change.LOAD);
 
-            Clock.instance().stop();
-            HistoryManager.setIgnoreSave(false);
-            HistoryManager.clearHistory();
-            model.restore(memento, 0, LifeFacade.Change.LOAD);
-
+        try {
+            Storable memento = FileFormat.forFileName(file.getName()).load(file);
+            mediator.load(memento);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Load Failed: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    private FileFormat getStrategy(String fileName) {
-        if (fileName.endsWith(".life"))  return new LifeFormat();
-        if (fileName.endsWith(".cells")) return new PlaintextFormat();
-        if (fileName.endsWith(".rle"))   return new RleFormat();
-        throw new IllegalArgumentException("지원하지 않는 파일 형식입니다: " + fileName);
     }
 }

@@ -1,5 +1,7 @@
 package com.holub.life;
 
+import java.lang.reflect.InvocationTargetException;
+import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,7 +70,52 @@ public class GridCommandsTest {
     }
 
     @Test
-    public void testRunBypassAndHaltRestoreFlow() {
+    public void testClearCommandCanBeUndone() {
+        model.setAlive(5, 5, true);
+        gridCommands.getClear().execute();
+        assertFalse(model.isAlive(5, 5));
+
+        gridCommands.getUndo().execute();
+        assertTrue(model.isAlive(5, 5));
+    }
+
+    @Test
+    public void testUndoHistoryKeepsOnlyTheNewestSteps() {
+        int edits = HistoryManager.MAX_HISTORY + 20;
+        for (int i = 0; i < edits; i++)
+            model.setAlive(i % 64, i / 64, true);
+
+        int undone = 0;
+        while (HistoryManager.canUndo()) {
+            gridCommands.getUndo().execute();
+            undone++;
+        }
+
+        assertEquals(HistoryManager.MAX_HISTORY, undone);
+        // the 20 oldest edits can no longer be undone
+        assertTrue(model.isAlive(19, 0));
+        assertFalse(model.isAlive(20, 0));
+    }
+
+    /**
+     * RunCommand가 켠 Swing Timer는 EDT에서 model.tick()을 호출한다.
+     * 테스트 스레드에서 시나리오를 돌리면 그 tick과 동시에 모델·HistoryManager를 건드려 결과가 흔들리므로,
+     * 앱과 같이 EDT 한 스레드에서 실행한다. (Timer tick은 큐에서 기다리다가 Halt 때 취소된다)
+     */
+    private static void onEventThread(Runnable scenario) throws Throwable {
+        try {
+            SwingUtilities.invokeAndWait(scenario);
+        } catch (InvocationTargetException e) {
+            throw e.getCause();
+        }
+    }
+
+    @Test
+    public void testRunBypassAndHaltRestoreFlow() throws Throwable {
+        onEventThread(this::runBypassAndHaltRestoreFlow);
+    }
+
+    private void runBypassAndHaltRestoreFlow() {
         // Given: 0세대 초기 패턴(Blinker) 세팅 후 이전 편집 히스토리 정리
         model.setAlive(1, 0, true);
         model.setAlive(1, 1, true);

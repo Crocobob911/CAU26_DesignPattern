@@ -1,18 +1,20 @@
 package com.holub.life;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import javax.swing.JOptionPane;
 import com.holub.io.Files;
 
 public class SaveCommand implements Command {
-    private final UniverseModel model;
+    private final LifeMediator mediator;
 
-    public SaveCommand(UniverseModel model) { 
-        this.model = model; 
+    public SaveCommand(LifeMediator mediator) { 
+        this.mediator = mediator; 
     }
 
     @Override
     public void execute() {
+        File file;
         try {
             File file = Files.userSelected(".", "", "Save Game (Please type extension: .life, .cells, or .rle)", "Write");
             if (file == null) return; 
@@ -20,16 +22,10 @@ public class SaveCommand implements Command {
             FileFormat format = getStrategy(file.getName());
             format.save(file, model);
 
+        try {
+            mediator.store(FileFormat.forFileName(file.getName()), file);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Save Failed: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    private FileFormat getStrategy(String fileName) {
-        if (fileName.endsWith(".life"))  return new LifeFormat();
-        if (fileName.endsWith(".cells")) return new PlaintextFormat();
-        if (fileName.endsWith(".rle"))   return new RleFormat(); 
-        
-        throw new IllegalArgumentException("지원하지 않는 파일 형식입니다: " + fileName);
     }
 }
