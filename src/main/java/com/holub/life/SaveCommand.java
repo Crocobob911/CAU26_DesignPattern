@@ -14,7 +14,7 @@ public class SaveCommand implements Command {
     @Override
     public void execute() {
         try {
-            File file = Files.userSelected(".", null, "Save Game (.life, .cells)", "Write");
+            File file = Files.userSelected(".", "", "Save Game (Please type extension: .life, .cells, or .rle)", "Write");
             if (file == null) return; 
 
             FileFormat format = getStrategy(file.getName());

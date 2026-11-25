@@ -14,7 +14,7 @@ public class LoadCommand implements Command {
     public void execute() {
         try {
 
-            File file = Files.userSelected(".", null, "Life Game Files (.life, .cells, .rle)", "Load");
+            File file = Files.userSelected(".", "", "All Files", "Load");
             if (file == null) return;
 
             FileFormat strategy = getStrategy(file.getName());
