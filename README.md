@@ -44,8 +44,9 @@ IDE의 Gradle JVM / Project SDK가 **JDK 21 이상**으로 설정되어 있는�
 
 | 작업 | Windows (PowerShell) | macOS / Linux |
 |---|---|---|
-| 빌드 (컴파일 + 테스트) | `.\gradlew.bat build` | `./gradlew build` |
+| 빌드 (컴파일 + 전체 테스트) | `.\gradlew.bat build` | `./gradlew build` |
 | 실행 | `.\gradlew.bat run` | `./gradlew run` |
-| 테스트만 | `.\gradlew.bat test` | `./gradlew test` |
+| 단위 테스트만 | `.\gradlew.bat test` | `./gradlew test` |
+| 통합 테스트만 (`@Tag("integration")`) | `.\gradlew.bat integrationTest` | `./gradlew integrationTest` |
 | 빌드 결과 삭제 | `.\gradlew.bat clean` | `./gradlew clean` |
 

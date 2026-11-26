@@ -3,9 +3,11 @@ package com.holub.life;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /** E3 statistics and cycle detection driven through the facade, without any Swing window. */
+@Tag("integration")
 class StatsIntegrationTest {
     private LifeFacade facade;
     private LifeMediator mediator;
