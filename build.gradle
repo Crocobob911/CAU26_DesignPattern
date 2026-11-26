@@ -30,7 +30,26 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'integration'
+    }
     // 모델 테스트는 화면 없이 돌아야 함 (CI 서버 대비)
     systemProperty 'java.awt.headless', 'true'
+}
+
+// 통합 테스트(@Tag("integration")): 앱과 같은 객체 연결(LifeWiring)로 사용자 시나리오를 검증
+tasks.register('integrationTest', Test) {
+    description = 'Runs tests tagged "integration".'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
+    systemProperty 'java.awt.headless', 'true'
+    shouldRunAfter test
+}
+
+tasks.named('check') {
+    dependsOn 'integrationTest'
 }
